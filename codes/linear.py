@@ -1,5 +1,5 @@
 import torch
-from typing import Generator, Tuple, Set, Dict, List
+from typing import Generator, Tuple, Set, Dict, List, Optional, Callable
 from pathlib import Path
 import matplotlib.pyplot as plt
 from tqdm import tqdm
@@ -31,10 +31,8 @@ def permuted_normal_vector(d: int, normal_vector: torch.tensor) -> Generator[tor
     for i in range(d):
         # Create a copy of the original vector to avoid modifying the original vector
         permuted_vector = normal_vector.clone()
-        # print(i, permuted_vector[0], permuted_vector[i])
         # Swap the 0th element with the ith element
         permuted_vector[0], permuted_vector[i] = permuted_vector[i].clone(), permuted_vector[0].clone()
-        # print(i, permuted_vector[0], permuted_vector[i]) 
         # Yield the permuted vector
         yield permuted_vector
 
@@ -42,68 +40,112 @@ def loop_over_hyperplane(d: int, normal_vector: torch.tensor, input_tensor: torc
     generator = permuted_normal_vector(d, normal_vector)
     for permuted_vector in generator:
         output = torch.matmul(permuted_vector, input_tensor)
-        yield permuted_vector, output
+        yield output
         
 def generate_output_histogram(d: int, normal_vector: torch.tensor, input_tensor: torch.tensor) -> Dict[float, List[int]]:
     generator = loop_over_hyperplane(d, normal_vector, input_tensor)
     output_dict = dict({})
-    for i, (_, output) in enumerate(generator):
+    for i, output in enumerate(generator):
         output = output.item()
         if output not in output_dict.keys():
             output_dict[output] = list([i])
         else:
-            output_dict[output] += [i]        
+            output_dict[output] += list([i])        
     return output_dict
 
-def plot_histogram(output_dict: Dict, plot_path : Path = "./histogram.png", bins: int = 10) -> None:
-    data = list([])
-    for value, frequency_list in output_dict.items():
-        data += [value] * len(frequency_list)
+def plot_curve(
+    plot_path: Path = "./output.png", 
+    figsize: Tuple = (10, 6), 
+    tight_layout: bool = True,  
+    plot_function: Callable = None, 
+    **kwargs):
     
     plt.figure(figsize=(10, 6))
-    plt.hist(data, bins=bins, color='blue', edgecolor='black', alpha=0.7)
+    plot_function(**kwargs)
     plt.tight_layout()
     plt.savefig(plot_path)
     
-def adversarial_attack_on_hyperplane(d: int, normal_vector: torch.tensor, input_tensor: torch.tensor, attack_vector: torch.tensor, epsilon: float = 1e-12) -> Tuple[int, int]:
-    generator = loop_over_hyperplane(d, normal_vector, (input_tensor + epsilon * attack_vector))
-    positive, negative = 0, 0
-    for i, (permuted_normal_vector, output) in enumerate(generator):
-        if output >= 0: positive += 1
-        elif output < 0: 
-            negative += 1
-            print(i)
-            print(permuted_normal_vector)
-    return positive, negative
 
-def adversarial_attack_on_hyperplane(d: int, normal_vector: torch.tensor, input_tensor: torch.tensor, attack_vector: torch.tensor, epsilon: float = 1e-12) -> float:
+def plot_histogram(output_dict: Dict, plot_path : Path = "./histogram.png", bins: int = 10) -> None:
+    
+    x = list([])
+    for value, freq_list in output_dict.items():
+        x += [value] * len(freq_list)
+    
+    # plt.figure(figsize=(10, 6))
+    # plt.hist(data, bins=bins, color='blue', edgecolor='black', alpha=0.7)
+    # plt.tight_layout()
+    # plt.savefig(plot_path)
+    
+    plot_curve(plot_path=plot_path, plot_function=plt.hist, **{"x": x, "bins": 10})
+    
+    
+def plot_barchart(output_dict: Dict, plot_path : Path = "./barchart.png") -> None:
+    x = list(output_dict.keys())
+    y = list([len(freq_list) for freq_list in output_dict.values()])
+    plt.figure(figsize=(10, 6))
+    plt.bar(x, y, color='blue', edgecolor='black')
+    plt.tight_layout()
+    plt.savefig(plot_path)
+    
+def adversarial_attack_on_hyperplane(d: int, normal_vector: torch.tensor, input_tensor: torch.tensor, attack_vector: torch.tensor, bias: float = 0, epsilon: float = 1e-12) -> float:
     generator = loop_over_hyperplane(d, normal_vector, (input_tensor + epsilon * attack_vector))
     positive, negative = 0, 0
-    for _, output in generator:
-        if output >= 0: positive += 1
-        elif output < 0: 
+    for output in generator:
+        if output >= bias: positive += 1
+        elif output < bias:
             negative += 1
     return positive / (positive + negative)
 
-
-def plot_adversarial_attack(d: int, normal_vector: torch.tensor, input_tensor: torch.tensor, attack_vector: torch.tensor, epsilon: float = 1e-12, step_size : int = 1e2, high: int = 1e7, plot_path : Path = "./adversarial_attack.png") -> None:
+def plot_adversarial_attack(d: int, normal_vector: torch.tensor, input_tensor: torch.tensor, attack_vector: torch.tensor, bias: float = 0, epsilon: float = 1e-12, step_size : int = 1e1, high: int = 1e4 * 1/2, plot_path : Path = "./adversarial_attack.png") -> None:
     x, y = [], []
     for i in tqdm(range(0, int(high), int(step_size))):
         ratio = adversarial_attack_on_hyperplane(d, normal_vector, input_tensor, normal_vector, i * epsilon)
         x.append(i)
-        y.append(ratio) 
+        y.append(ratio)
     
     plt.figure(figsize=(10, 6))
+    plt.xlabel(f"{epsilon}")
+    plt.ylabel("positive / (positive + negative)")
     plt.plot(x, y)
     plt.tight_layout()
     plt.savefig(plot_path)
-                
+    
+def plot_adversarial_attack(d: int, normal_vector: torch.tensor, input_tensors: List[torch.tensor], attack_vector: torch.tensor, epsilon: float = 1e-12, step_size : int = 1e2, high: int = 1e4 * 1/3, plot_path : Path = "./adversarial_attack.png") -> None:
+    x, ratio_mean, ratio_std_dev = list([]), list([]), list([])
+    first_zero = False
+    for i in tqdm(range(0, int(high), int(step_size))):
+        ratio_list = list([])
+        for input_tensor in input_tensors:
+            ratio = adversarial_attack_on_hyperplane(d, normal_vector, input_tensor, normal_vector, i * epsilon)
+            ratio_list.append(ratio)
+        ratio_list = torch.tensor(ratio_list)    
+        
+        x.append(i)
+        ratio_mean.append(torch.mean(ratio_list))
+        ratio_std_dev.append(torch.std(ratio_list))
+        
+        if ratio_std_dev[-1] == 0 and not first_zero:
+            print(f"First zero encountered at iteration {i}, with epsilon = {i * epsilon}")
+            first_zero = True
+            
+    plt.figure(figsize=(10, 6))
+    plt.errorbar(x, ratio_mean, yerr=ratio_std_dev, linestyle="None", fmt='-o')
+    plt.xlabel(f"{epsilon}")
+    plt.ylabel("% positive")
+    plt.tight_layout()
+    plt.savefig(plot_path)
+                    
 # Example usage:
 d = 1000
 normal_vector = create_normal_vector(d)
-input_tensor = torch.tensor([1.0] * d) / d
+input_tensor = [torch.tensor([1.0 + test/1e6] * d) / d for test in range(100)]
+# input_tensor = input_tensor[:1]
 # input_tensor[-1] = input_tensor[-1] - torch.tensor([-1.6e-12])
 
+output_dict = generate_output_histogram(d, normal_vector, input_tensor[0])
+plot_histogram(output_dict)
+plot_barchart(output_dict)
 plot_adversarial_attack(d, normal_vector, input_tensor, normal_vector)
 
 # epsilon = 1e-12
