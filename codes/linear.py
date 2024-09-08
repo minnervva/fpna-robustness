@@ -129,8 +129,9 @@ def merge_output_histogram(d: int, normal_vector: torch.tensor, input_tensors: L
     return merged_dict
 
 def generate_mesh(d: int, min: float, max: float, N: int) -> torch.tensor:
-    grid = [torch.linspace(min, max, steps=N) for _ in range(d)]   
-    mesh = torch.stack(torch.meshgrid(*grid), dim=-1).view(-1, 2)
+    grid = [torch.linspace(min, max, steps=N) for _ in range(d)]
+    mesh = torch.meshgrid(*grid, indexing='ij')
+    mesh = torch.stack(mesh, dim=-1).view(-1, d)
     return mesh
 
 if __name__ == "__main__":
@@ -146,10 +147,16 @@ if __name__ == "__main__":
     # plot_histogram(output_dict)
     # plot_barchart(output_dict)
     # plot_adversarial_attack(d, normal_vector, input_tensor, normal_vector)
+    # output_dict = merge_output_histogram(d, normal_vector, input_tensor)
+    # plot_histogram(output_dict)
+    # plot_barchart(output_dict)
+    # print(min(output_dict.keys()), max(output_dict.keys()))
+    
+    mesh = generate_mesh(d, -10, 10, 100)
     output_dict = merge_output_histogram(d, normal_vector, input_tensor)
     plot_histogram(output_dict)
     plot_barchart(output_dict)
-    print(min(output_dict.keys()), max(output_dict.keys()))
+    
 
     # # Example usage for a 4D grid
     # dimensions = 2
