@@ -73,7 +73,7 @@ def plot_histogram(output_dict: Dict, plot_path : Path = "./histogram.png", bins
             raise ValueError(f"output_dict values expected to be of type int or List[int], fot {type(freq)} instead")
     plot_curve(plot_path=plot_path, plot_function=plt.hist, **{"x": x, "bins": bins})
     
-    
+# TODO: debug rectangular output
 def plot_barchart(output_dict: Dict, plot_path : Path = "./barchart.png") -> None:
     x = list(output_dict.keys())
     type_check = next(iter(output_dict.values()))
@@ -83,7 +83,7 @@ def plot_barchart(output_dict: Dict, plot_path : Path = "./barchart.png") -> Non
         y = list(output_dict.values())
     else:
         raise ValueError(f"output_dict values expected to be of type int or List[int], fot {type(type_check)} instead")
-    plot_curve(plot_path=plot_path, plot_function=plt.bar, **{"x": x, "height": y})
+    plot_curve(plot_path=plot_path, plot_function=plt.bar, **{"x": x, "height": y, "width": 0.5})
    
     
 def adversarial_attack_on_hyperplane(d: int, normal_vector: torch.tensor, input_tensor: torch.tensor, attack_vector: torch.tensor, bias: float = 0, epsilon: float = 1e-12) -> float:
@@ -128,24 +128,39 @@ def merge_output_histogram(d: int, normal_vector: torch.tensor, input_tensors: L
                 merged_dict[value] = len(freq_list)
     return merged_dict
 
+def generate_mesh(d: int, min: float, max: float, N: int) -> torch.tensor:
+    grid = [torch.linspace(min, max, steps=N) for _ in range(d)]   
+    mesh = torch.stack(torch.meshgrid(*grid), dim=-1).view(-1, 2)
+    return mesh
+
 if __name__ == "__main__":
     
     # Example usage:
     d = 1000
     normal_vector = create_normal_vector(d)
-    input_tensor = [torch.tensor([1.0 + test/1e6] * d) / d for test in range(100)]
+    input_tensor = [torch.tensor([1.0 + test/1e6] * d) / d for test in range(1_000)]
     # input_tensor = input_tensor[:1]
     # input_tensor[-1] = input_tensor[-1] - torch.tensor([-1.6e-12])
 
     # output_dict = generate_output_histogram(d, normal_vector, input_tensor[0])
     # plot_histogram(output_dict)
     # plot_barchart(output_dict)
-    plot_adversarial_attack(d, normal_vector, input_tensor, normal_vector)
+    # plot_adversarial_attack(d, normal_vector, input_tensor, normal_vector)
     output_dict = merge_output_histogram(d, normal_vector, input_tensor)
     plot_histogram(output_dict)
     plot_barchart(output_dict)
     print(min(output_dict.keys()), max(output_dict.keys()))
 
+    # # Example usage for a 4D grid
+    # dimensions = 2
+    # start = -10
+    # end = 10
+    # num_points = 20
+
+    # result = generate_mesh(dimensions, start, end, num_points)
+    # print(result.size())
+    # for tensor in result:
+    #     print(tensor)
     
 
 # epsilon = 1e-12
