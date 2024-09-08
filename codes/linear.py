@@ -3,6 +3,7 @@ from typing import Generator, Tuple, Set, Dict, List, Optional, Callable
 from pathlib import Path
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+import itertools
 
 # d = 8
 # n = d / torch.sqrt(torch.tensor([d * (d-1)])) * torch.tensor([d-1] + [-1] * (d-1))
@@ -27,6 +28,7 @@ from tqdm import tqdm
 def create_normal_vector(d: int) -> torch.tensor:
     return 1 / torch.sqrt(torch.tensor([d * (d-1)])) * torch.tensor([d-1] + [-1] * (d-1))
 
+
 def permuted_normal_vector(d: int, normal_vector: torch.tensor) -> Generator[torch.Tensor, None, None]:
     for i in range(d):
         # Create a copy of the original vector to avoid modifying the original vector
@@ -36,11 +38,13 @@ def permuted_normal_vector(d: int, normal_vector: torch.tensor) -> Generator[tor
         # Yield the permuted vector
         yield permuted_vector
 
+
 def loop_over_hyperplane(d: int, normal_vector: torch.tensor, input_tensor: torch.tensor) -> Generator[Tuple[torch.Tensor, Set[float]], None, None]:
     generator = permuted_normal_vector(d, normal_vector)
     for permuted_vector in generator:
         output = torch.matmul(permuted_vector, input_tensor)
         yield output
+
         
 def generate_output_histogram(d: int, normal_vector: torch.tensor, input_tensor: torch.tensor) -> Dict[float, List[int]]:
     generator = loop_over_hyperplane(d, normal_vector, input_tensor)
@@ -53,7 +57,8 @@ def generate_output_histogram(d: int, normal_vector: torch.tensor, input_tensor:
             output_dict[output] += list([i])        
     return output_dict
 
-def plot_curve(plot_path: Path = "./output.png", figsize: Tuple = (10, 6), tight_layout: bool = True,  plot_function: Callable = None, xlabel: str = None, ylabel: str = None, **kwargs):
+
+def plot_curve(plot_path: Path = "./output.png", figsize: Tuple = (10, 6), tight_layout: bool = True,  plot_function: Callable = None, xlabel: str = None, ylabel: str = None, **kwargs) -> None:
     plt.figure(figsize=(10, 6))
     plot_function(**kwargs)
     plt.tight_layout()
@@ -72,6 +77,7 @@ def plot_histogram(output_dict: Dict, plot_path : Path = "./histogram.png", bins
         else:
             raise ValueError(f"output_dict values expected to be of type int or List[int], fot {type(freq)} instead")
     plot_curve(plot_path=plot_path, plot_function=plt.hist, **{"x": x, "bins": bins})
+
     
 # TODO: debug rectangular output
 def plot_barchart(output_dict: Dict, plot_path : Path = "./barchart.png") -> None:
@@ -93,10 +99,11 @@ def adversarial_attack_on_hyperplane(d: int, normal_vector: torch.tensor, input_
         if output >= bias: positive += 1
         elif output < bias:
             negative += 1
+    print(positive, negative)
     return positive / (positive + negative)
 
     
-def plot_adversarial_attack(d: int, normal_vector: torch.tensor, input_tensors: List[torch.tensor], attack_vector: torch.tensor, epsilon: float = 1e-12, step_size : int = 1e2, high: int = 1e4 * 1/3, plot_path : Path = "./adversarial_attack.png") -> None:
+def plot_adversarial_attack_decision_boudary(d: int, normal_vector: torch.tensor, input_tensors: List[torch.tensor], attack_vector: torch.tensor, epsilon: float = 1e-12, step_size : int = 1e2, high: int = 1e4 * 1/3, plot_path : Path = "./adversarial_attack_decision_boundary.png") -> None:
     x, ratio_mean, ratio_std_dev = list([]), list([]), list([])
     first_zero = False
     for i in tqdm(range(0, int(high), int(step_size))):
@@ -116,6 +123,31 @@ def plot_adversarial_attack(d: int, normal_vector: torch.tensor, input_tensors: 
             
     plot_curve(plot_path=plot_path, plot_function=plt.errorbar, xlabel="epsilon", ylabel="% positive", **{"x": x, "y": ratio_mean, "yerr": ratio_std_dev, "fmt": "o"})
 
+def plot_adversarial_attack_mesh(d: int, normal_vector: torch.tensor, input_tensors: List[torch.tensor], attack_vector: torch.tensor, bias: float = 0.0, epsilon: float = 1e-12, step_size : int = 1e2, high: int = 1e4 * 1/3, plot_path : Path = "./adversarial_attack_mesh.png") -> None:
+    x, ratio_mean, ratio_std_dev = list([]), list([]), list([])
+    first_zero = False
+    for i in tqdm(range(0, int(high), int(step_size))):
+        ratio_list = list([])
+        for input_tensor in input_tensors:
+            distance = torch.matmul(normal_vector, input_tensor) 
+            attack_vector = -1 * attack_vector if distance < 0 else attack_vector
+            input_tensor = input_tensor + torch.dot(normal_vector, input_tensor) * attack_vector
+            ratio = adversarial_attack_on_hyperplane(d, normal_vector, input_tensor, attack_vector, i * epsilon)
+            ratio_list.append(ratio)
+        ratio_list = torch.tensor(ratio_list)    
+        
+        x.append(i)
+        ratio_mean.append(torch.mean(ratio_list))
+        ratio_std_dev.append(torch.std(ratio_list))
+        
+        print(f"mean ratio: {ratio_mean[-1]} \t standard deviation ratio {ratio_std_dev[-1]}")
+        
+        if ratio_std_dev[-1] == 0 and not first_zero:
+            print(f"First zero encountered at iteration {i}, with epsilon = {i * epsilon}")
+            first_zero = True
+            
+    plot_curve(plot_path=plot_path, plot_function=plt.errorbar, xlabel="epsilon", ylabel="% positive", **{"x": x, "y": ratio_mean, "yerr": ratio_std_dev, "fmt": "o"})
+
 
 def merge_output_histogram(d: int, normal_vector: torch.tensor, input_tensors: List[torch.tensor]) -> Dict[float, int]:
     merged_dict = dict({})
@@ -128,34 +160,39 @@ def merge_output_histogram(d: int, normal_vector: torch.tensor, input_tensors: L
                 merged_dict[value] = len(freq_list)
     return merged_dict
 
-def generate_mesh(d: int, min: float, max: float, N: int) -> torch.tensor:
-    grid = [torch.linspace(min, max, steps=N) for _ in range(d)]
-    mesh = torch.meshgrid(*grid, indexing='ij')
-    mesh = torch.stack(mesh, dim=-1).view(-1, d)
-    return mesh
+
+def generate_mesh(d: int, min: float, max: float, N: int) -> Generator[torch.Tensor, None, None]:
+    axes = torch.linspace(min, max, steps=N)    
+    for idx in itertools.product(range(N), repeat=d):
+        point = torch.tensor([axes[i] for i in idx])
+        yield point
+
 
 if __name__ == "__main__":
+
+    device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
     
     # Example usage:
-    d = 1000
+    d = 5
     normal_vector = create_normal_vector(d)
-    input_tensor = [torch.tensor([1.0 + test/1e6] * d) / d for test in range(1_000)]
+    input_tensor = [torch.tensor([1.0 + test/1e6] * d) / d for test in range(10)]
     # input_tensor = input_tensor[:1]
     # input_tensor[-1] = input_tensor[-1] - torch.tensor([-1.6e-12])
 
     # output_dict = generate_output_histogram(d, normal_vector, input_tensor[0])
     # plot_histogram(output_dict)
     # plot_barchart(output_dict)
-    # plot_adversarial_attack(d, normal_vector, input_tensor, normal_vector)
+    # plot_adversarial_attack_decision_boundary(d, normal_vector, input_tensor, normal_vector)
     # output_dict = merge_output_histogram(d, normal_vector, input_tensor)
     # plot_histogram(output_dict)
     # plot_barchart(output_dict)
     # print(min(output_dict.keys()), max(output_dict.keys()))
     
-    mesh = generate_mesh(d, -10, 10, 100)
-    output_dict = merge_output_histogram(d, normal_vector, input_tensor)
-    plot_histogram(output_dict)
-    plot_barchart(output_dict)
+    mesh = generate_mesh(d, -10, 10, 10)
+    plot_adversarial_attack_mesh(d, normal_vector, mesh, normal_vector)
+    # output_dict = merge_output_histogram(d, normal_vector, mesh)
+    # plot_histogram(output_dict)
+    # plot_barchart(output_dict)
     
 
     # # Example usage for a 4D grid
