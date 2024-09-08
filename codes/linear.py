@@ -53,40 +53,38 @@ def generate_output_histogram(d: int, normal_vector: torch.tensor, input_tensor:
             output_dict[output] += list([i])        
     return output_dict
 
-def plot_curve(
-    plot_path: Path = "./output.png", 
-    figsize: Tuple = (10, 6), 
-    tight_layout: bool = True,  
-    plot_function: Callable = None, 
-    **kwargs):
-    
+def plot_curve(plot_path: Path = "./output.png", figsize: Tuple = (10, 6), tight_layout: bool = True,  plot_function: Callable = None, xlabel: str = None, ylabel: str = None, **kwargs):
     plt.figure(figsize=(10, 6))
     plot_function(**kwargs)
     plt.tight_layout()
     plt.savefig(plot_path)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
     
 
-def plot_histogram(output_dict: Dict, plot_path : Path = "./histogram.png", bins: int = 10) -> None:
-    
+def plot_histogram(output_dict: Dict, plot_path : Path = "./histogram.png", bins: int = 100) -> None:
     x = list([])
-    for value, freq_list in output_dict.items():
-        x += [value] * len(freq_list)
-    
-    # plt.figure(figsize=(10, 6))
-    # plt.hist(data, bins=bins, color='blue', edgecolor='black', alpha=0.7)
-    # plt.tight_layout()
-    # plt.savefig(plot_path)
-    
-    plot_curve(plot_path=plot_path, plot_function=plt.hist, **{"x": x, "bins": 10})
+    for value, freq in output_dict.items():
+        if isinstance(freq, list):
+            x += [value] * len(freq)
+        elif isinstance(freq, int):
+            x += [value] * freq
+        else:
+            raise ValueError(f"output_dict values expected to be of type int or List[int], fot {type(freq)} instead")
+    plot_curve(plot_path=plot_path, plot_function=plt.hist, **{"x": x, "bins": bins})
     
     
 def plot_barchart(output_dict: Dict, plot_path : Path = "./barchart.png") -> None:
     x = list(output_dict.keys())
-    y = list([len(freq_list) for freq_list in output_dict.values()])
-    plt.figure(figsize=(10, 6))
-    plt.bar(x, y, color='blue', edgecolor='black')
-    plt.tight_layout()
-    plt.savefig(plot_path)
+    type_check = next(iter(output_dict.values()))
+    if isinstance(type_check, list):
+        y = list([len(freq_list) for freq_list in output_dict.values()])
+    elif isinstance(type_check, int):
+        y = list(output_dict.values())
+    else:
+        raise ValueError(f"output_dict values expected to be of type int or List[int], fot {type(type_check)} instead")
+    plot_curve(plot_path=plot_path, plot_function=plt.bar, **{"x": x, "height": y})
+   
     
 def adversarial_attack_on_hyperplane(d: int, normal_vector: torch.tensor, input_tensor: torch.tensor, attack_vector: torch.tensor, bias: float = 0, epsilon: float = 1e-12) -> float:
     generator = loop_over_hyperplane(d, normal_vector, (input_tensor + epsilon * attack_vector))
@@ -97,19 +95,6 @@ def adversarial_attack_on_hyperplane(d: int, normal_vector: torch.tensor, input_
             negative += 1
     return positive / (positive + negative)
 
-def plot_adversarial_attack(d: int, normal_vector: torch.tensor, input_tensor: torch.tensor, attack_vector: torch.tensor, bias: float = 0, epsilon: float = 1e-12, step_size : int = 1e1, high: int = 1e4 * 1/2, plot_path : Path = "./adversarial_attack.png") -> None:
-    x, y = [], []
-    for i in tqdm(range(0, int(high), int(step_size))):
-        ratio = adversarial_attack_on_hyperplane(d, normal_vector, input_tensor, normal_vector, i * epsilon)
-        x.append(i)
-        y.append(ratio)
-    
-    plt.figure(figsize=(10, 6))
-    plt.xlabel(f"{epsilon}")
-    plt.ylabel("positive / (positive + negative)")
-    plt.plot(x, y)
-    plt.tight_layout()
-    plt.savefig(plot_path)
     
 def plot_adversarial_attack(d: int, normal_vector: torch.tensor, input_tensors: List[torch.tensor], attack_vector: torch.tensor, epsilon: float = 1e-12, step_size : int = 1e2, high: int = 1e4 * 1/3, plot_path : Path = "./adversarial_attack.png") -> None:
     x, ratio_mean, ratio_std_dev = list([]), list([]), list([])
@@ -129,24 +114,39 @@ def plot_adversarial_attack(d: int, normal_vector: torch.tensor, input_tensors: 
             print(f"First zero encountered at iteration {i}, with epsilon = {i * epsilon}")
             first_zero = True
             
-    plt.figure(figsize=(10, 6))
-    plt.errorbar(x, ratio_mean, yerr=ratio_std_dev, linestyle="None", fmt='-o')
-    plt.xlabel(f"{epsilon}")
-    plt.ylabel("% positive")
-    plt.tight_layout()
-    plt.savefig(plot_path)
-                    
-# Example usage:
-d = 1000
-normal_vector = create_normal_vector(d)
-input_tensor = [torch.tensor([1.0 + test/1e6] * d) / d for test in range(100)]
-# input_tensor = input_tensor[:1]
-# input_tensor[-1] = input_tensor[-1] - torch.tensor([-1.6e-12])
+    plot_curve(plot_path=plot_path, plot_function=plt.errorbar, xlabel="epsilon", ylabel="% positive", **{"x": x, "y": ratio_mean, "yerr": ratio_std_dev, "fmt": "o"})
 
-output_dict = generate_output_histogram(d, normal_vector, input_tensor[0])
-plot_histogram(output_dict)
-plot_barchart(output_dict)
-plot_adversarial_attack(d, normal_vector, input_tensor, normal_vector)
+
+def merge_output_histogram(d: int, normal_vector: torch.tensor, input_tensors: List[torch.tensor]) -> Dict[float, int]:
+    merged_dict = dict({})
+    for input_tensor in tqdm(input_tensors):
+        tmp_dict = generate_output_histogram(d, normal_vector, input_tensor)
+        for value, freq_list in tmp_dict.items():
+            if value in merged_dict.keys():
+                merged_dict[value] += len(freq_list)
+            else:
+                merged_dict[value] = len(freq_list)
+    return merged_dict
+
+if __name__ == "__main__":
+    
+    # Example usage:
+    d = 1000
+    normal_vector = create_normal_vector(d)
+    input_tensor = [torch.tensor([1.0 + test/1e6] * d) / d for test in range(100)]
+    # input_tensor = input_tensor[:1]
+    # input_tensor[-1] = input_tensor[-1] - torch.tensor([-1.6e-12])
+
+    # output_dict = generate_output_histogram(d, normal_vector, input_tensor[0])
+    # plot_histogram(output_dict)
+    # plot_barchart(output_dict)
+    plot_adversarial_attack(d, normal_vector, input_tensor, normal_vector)
+    output_dict = merge_output_histogram(d, normal_vector, input_tensor)
+    plot_histogram(output_dict)
+    plot_barchart(output_dict)
+    print(min(output_dict.keys()), max(output_dict.keys()))
+
+    
 
 # epsilon = 1e-12
 # for i in range(0, 10_000_000, 1_000):
