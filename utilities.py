@@ -1,4 +1,6 @@
 import torch
+import time
+
 
 def assign_fixed_params(model):
     rng_gen = torch.Generator()
@@ -7,37 +9,41 @@ def assign_fixed_params(model):
         for p in model.parameters():
             p.copy_(torch.randn(*p.shape, generator=rng_gen, dtype=p.dtype))
 
-# Only works with batched data would be better if it did both by default.
-class AtomicLinear(torch.nn.Module):
-    def __init__(self, in_features, out_features):
-        super(AtomicLinear, self).__init__()
-        self.in_features = in_features
-        self.out_features = out_features
-        self.weight = torch.nn.Parameter(torch.randn(out_features, in_features))
-        self.bias = torch.nn.Parameter(torch.randn(out_features))
-    # x has dimension [batch_size, in_features]
-    def forward(self, x):
-        # return x.matmul(self.weight.t()) + self.bias
-        #percent_flipped = 0.5
-        #[0,1,2,3] + torch.randperm([4,5,6,7])
-        indices = torch.stack([torch.stack([torch.randperm(self.in_features) for _ in range(self.out_features)]) for b in range(len(x))])
-        #print(indices.shape)
-        prod = torch.gather(x[:,None,:]*self.weight, dim=2, index=indices)
-        return prod.sum(dim=2) + self.bias[None,:]
+def save_to_files(models, losses, accuracies):
+    for i,model in enumerate(models):
+        torch.save(model.state_dict(), f"atomic_models/model_{i}.pth")
 
+    np.save("atomic_models/losses.npy", losses)
+    np.save("atomic_models/accuracies.npy", accuracies)
 
-class AtomicLinearTest(torch.nn.Module):
-    def __init__(self, in_features, out_features):
-        super(AtomicLinearTest, self).__init__()
-        self.in_features = in_features
-        self.out_features = out_features
-        self.weight = torch.nn.Parameter(torch.randn(out_features, in_features))
-        self.bias = torch.nn.Parameter(torch.randn(out_features))
-    def forward(self, x):
-        # return x.matmul(self.weight.t()) + self.bias
-        #indices = torch.stack([torch.stack([torch.randperm(self.in_features) for _ in range(self.out_features)]) for b in range(len(x))])
-        indices = torch.stack([torch.stack([torch.tensor([i for i in range(self.in_features)]) for _ in range(self.out_features)]) for b in range(len(x))])
-        #print(indices.shape)
-        #print((x[:,None,:]*self.weight).shape)
-        prod = torch.gather(x[:,None,:]*self.weight, dim=2, index=indices)
-        return prod.sum(dim=2) + self.bias[None,:]
+class TimerError(Exception):
+    """A custom exception used to report errors in use of Timer class"""
+
+class Timer:
+    def __init__(self):
+        self._start_time = None
+
+    def start(self):
+        """Start a new timer"""
+        if self._start_time is not None:
+            raise TimerError(f"Timer is running. Use .stop() to stop it")
+
+        self._start_time = time.perf_counter()
+
+    def stop(self):
+        """Stop the timer, and report the elapsed time"""
+        if self._start_time is None:
+            raise TimerError(f"Timer is not running. Use .start() to start it")
+
+        elapsed_time = time.perf_counter() - self._start_time
+        self._start_time = None
+        return elapsed_time
+
+    def pstop(self):
+        """Stop the timer, and report the elapsed time"""
+        if self._start_time is None:
+            raise TimerError(f"Timer is not running. Use .start() to start it")
+
+        elapsed_time = time.perf_counter() - self._start_time
+        self._start_time = None
+        print(f"Elapsed time: {elapsed_time:.4f} seconds")
