@@ -168,7 +168,7 @@ def visualize(image, graph, h):
     
 if __name__ == "__main__":
     frames = []  # List to store the frames for the GIF
-    dataset = MNIST(root="./data", download=True, train=False)
+    dataset = FashionMNIST(root="./data", download=True, train=False)
     
     for i in range(10):    
         image = np.array(dataset.__getitem__(i)[0])

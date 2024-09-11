@@ -76,6 +76,7 @@ class LightningMNISTClassifier(pl.LightningModule):
         total_correct = 0
         total_samples = 0
 
+        #TODO: be smnart about inputs
         for batch in data_loader:
             x, y = batch
 
@@ -166,7 +167,7 @@ logger = pl.loggers.TensorBoardLogger("tb_logs", name="mnist_model")
 csv_logger = pl.loggers.CSVLogger("csv_logs", name="mnist_model")
 
 # Train the model
-trainer = pl.Trainer(max_epochs=1, logger=logger)
+trainer = pl.Trainer(max_epochs=10, logger=logger)
 
 # Training and the adversarial attack will automatically be called after training is done
 trainer.fit(model, data_module)
