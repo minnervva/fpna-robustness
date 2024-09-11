@@ -54,19 +54,33 @@ $$ B = \{\mathbf{x} \in \mathbb{R}^{d} :  F(\mathbb{x} = 0)\} $$
 
 $B$ splits the domain, $\mathbb{R}^{d}$ into subspaces of similar classification, $C_{k} = \{ \mathbf{x} \in \mathbb{R}^{d} : \hat{k}(\mathbf{x} =k), 1 \leq k \leq L\}$ Therefore, assuming each $C_{k}$ has non-empty interior, $\mathbf{R}^{d} \setminus B = \bigcup_{k=1}^{L} C_{k}$. In particular, $\mathbf{x} \notin B$ implies $x \in C_{k}$. Given $x \in \mathbb{R}^{d}$, a perturbation $\delta({\mathbf{x}}) \in \mathbb{R}^{d}$ such that $\mathbf{x} + \delta({\mathbf{x}}) \in B$, we have that $\mathbf{x} + \delta({\mathbf{x}})$ is on the boundary of misclassification. Hence, when considering misclassification, we study properties of the decision boundary $B$.
 
-An adversarial perturbation, $\delta_{\text{adv}}(\mathbf{x} ; f)$ is defined by the following optimisation problem:
+An adversarial perturbation, $\boldsymbol{\delta}_{\text{adv}}(\mathbf{x}; f)$ is defined by the following optimisation problem:
+
 $$
-\delta_{\text{adv}}(\mathbf{x} ; f)=\underset{\delta \in \mathbb{R}^d}{\arg \min }\|\delta\|_2 \text { s.t } F(\mathbf{x}+\delta)=0
+\boldsymbol{\delta}_{\text{adv}}(\mathbf{x} ; f)= \operatorname{\argmin}_{\boldsymbol{\delta} \in \mathbb{R}^d}\|\boldsymbol{\delta}\| \text {s.t.} F(\mathbf{x}+ \boldsymbol{\delta}) = 0
 $$
 
-In other words, $\delta_{\text{adv}}(\mathbf{x} ; f)$ is a perturbation vector of minimal length to the decision boundary. Note $\delta_{\text{adv}}(\mathbf{x} ; f)$ need not be unique. In this case, without loss of generality, we select a valid perturbation vector at random and assign it to $\delta_{a d v}(\mathbf{x} ; f)$. Point $\mathbf{x}+\delta_{a d v}(\mathbf{x} ; f)$ will then be on the boundary of misclassification. Note an adversarial perturbation is typically defined as the minimal distance to mislcassification, $\min _{\delta \in \mathbb{R}^d}\|\delta\|_2$ s.t $\hat{k}(\mathbf{x}+\boldsymbol{\delta}) \neq \hat{k}(\mathbf{x})$. However, it is easier to consider a perturbation to the decision boundary and we shall consider these two frameworks as identical throughout this paper. This is because once on the decision boundary, an infinitesimal perturbation will result in misclassification.
+In other words, $\boldsymbol{\delta}_{\text{adv}}(\mathbf{x} ; f)$ is a perturbation vector of minimal length to the decision boundary. Note $\boldsymbol{\delta}_{\text{adv}}(\mathbf{x} ; f)$ need not be unique. In this case, without loss of generality, we select a valid perturbation vector at random and assign it to $\boldsymbol{\delta}_\text{adv}(\mathbf{x} ; f)$. Point $\mathbf{x}+\boldsymbol{\delta}_{\text{adv}}(\mathbf{x} ; f)$ will then be on the boundary of misclassification. Note an adversarial perturbation is typically defined as the minimal distance to mislcassification, $\min _{\boldsymbol{\delta} \in \mathbb{R}^d}\|\boldsymbol{\delta}\|$ s.t. $\hat{k}(\mathbf{x}+\boldsymbol{\delta}) \neq \hat{k}(\mathbf{x})$. However, it is easier to consider a perturbation to the decision boundary and we shall consider these two frameworks as identical throughout this paper. This is because once on the decision boundary, an infinitesimal perturbation will result in misclassification.
 
-An adversarial distance, $\delta_{\text {adv }}(\mathbf{x} ; f)$ is defined as:
+An adversarial distance, $\delta_{\text{adv}}(\mathbf{x} ; f)$ is defined as:
 $$
-\delta_{a d v}(\mathbf{x} ; f)=\left\|\delta_{a d v}(\mathbf{x} ; f)\right\|=\min _{\delta \in \mathbb{R}^d}\|\delta\|_2 : F(\mathbf{x}+\delta)=0
+\delta_{\text{adv}}(\mathbf{x} ; f)=\|\boldsymbol{\delta}_{\text{adv}}(\mathbf{x} ; f)\|=\operatorname{\min} _{\boldsymbol{\delta} \in \mathbb{R}^d}\|\boldsymbol{\delta}\| : F(\mathbf{x}+\boldsymbol{\delta})=0
 $$
 
-In other words, $\delta_{\text{adv}}(\mathbf{x} ; f)$ is the minimal length of a perturbation to the decision boundary. Given $\alpha \in \mathbb{R}$, if $\alpha \geq \delta_{\text {adv }}(\mathbf{x} ; f)$, then $\exists \delta \in \mathbb{S}=\left\{\mathbf{x} \in \mathbb{R}^d \mid\|\mathbf{x}\|=1\right\}$ such that $F(\mathbf{x}+\alpha \boldsymbol{\delta})=$ 0 . On the other hand, if $\alpha<\delta_{a d v}(\mathbf{x} ; f), \forall \delta \in \mathbb{S}$ we have that $F(\mathbf{x}+\alpha \delta) \neq 0$. All perturbations of magnitude less than $\alpha$ cannot reach the decision boundary B . The larger the value of $\delta_{\text{adv}}(\mathbf{x} ; f)$, the more robust we say the point $\mathbf{x} \in \mathbb{R}^d$ is to adversarial perturbations.
+In other words, $\delta_{\text{adv}}(\mathbf{x} ; f)$ is the minimal length of a perturbation to the decision boundary. Given $\alpha \in \mathbb{R}$, if $\alpha \geq \delta_{\text{adv}}(\mathbf{x} ; f)$, then $\exists \boldsymbol{\delta} \in \mathbb{S}=\{\mathbf{x} \in \mathbb{R}^d : \|\mathbf{x}\|=1\}$ such that $F(\mathbf{x}+\alpha \boldsymbol{\delta})=$ 0 . On the other hand, if $\alpha<\delta_{\text{adv}}(\mathbf{x} ; f), \forall \boldsymbol{\delta} \in \mathbb{S}$ we have that $F(\mathbf{x}+\alpha \boldsymbol{\delta}) \neq 0$. All perturbations of magnitude less than $\alpha$ cannot reach the decision boundary $B$ . The larger the value of $\delta_{\text{adv}}(\mathbf{x} ; f)$, the more robust we say the point $\mathbf{x} \in \mathbb{R}^d$ is to adversarial perturbations.
+
+
+An adversarial attack is a minimal perturbation. For a random perturbation, given a rate of misclassification $\epsilon \in [0, 1]$,  and a measure $\mu$, $\Delta_{\mu, \varepsilon}(\mathbf{x} ; f)$ denotes the maximal radius of the sphere centred at $\mathbf{x}\in\mathbb{R}^{d}$ such that the probability of misclassification of datapoints on $\mathbf{x} + \delta\mathbb{S}$ is less than or equal to $\epsilon$. Note that $\mathbb{S}$ denotes the unit sphere centred at the origin in $\mathbb{R}^{d}$. 
+
+$$\Delta_{\mu, \varepsilon}(\mathbf{x} ; f)=\max_{\boldsymbol{\delta} \in \delta\mathbb{S}} \delta \ : \ \mathbb{P}_{\delta\mathbb{S}} \left(\arg \max _{k} f_{k}(\mathbf{x})=\hat{k}(\mathbf{x}) \neq \hat{k}(\mathbf{x}+\boldsymbol{\delta})\right) \leqslant \varepsilon$$ 
+
+## Questions we hope to answer
+
+- Robustness bounds and results have been studied extensively in the case of inpt variability. These bounds do not include the effects of to run-by-run FPNA variability. Can we replicate and compare well known robustness results with deterministic algorithms and non-deterministic algorithms? What is the extent of the divergence, if any? Loop over hardware, ask @asedova and @mtaillefumier for help running experiments.
+- Do certifiable / provable robust bounds hold with FPNA run-by-run variability. @sanjif-shanmugavelu suspects these bounds should also be a function of hardware/datatype.
+- Can we extend this to the regression case? Ask @asedova for papers.
+- Does adversarial training help with FPNA attacks? Does adversarial training on machine $A$ translate to similar robustness on machine $B$ when $A \neq B$.
+- Random perturbation training has shown to improve robustness, can training with non-deterministic algorithms help in a similar vein? Compare the two forms of adversarial training. 
 
 
 
