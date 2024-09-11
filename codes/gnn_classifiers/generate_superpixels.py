@@ -150,7 +150,7 @@ def visualize(image, graph, h):
     pos = nx.spring_layout(graph)  # Generate a layout for the graph
     # Invert the y-coordinates to match the image orientation
     pos = {k: (v[0], -v[1]) for k, v in pos.items()}
-    node_colors = ['black' if np.mean(h[i]) > 0.8 else 'yellow' for i in graph.nodes]
+    node_colors = ['black' if np.mean(h[i]) > 0.8 else 'white' for i in graph.nodes]
     node_sizes = [ max(np.mean(h[i]), 0.8) * 25 for i in graph.nodes]
 
     nx.draw(graph, pos, node_color=node_colors, node_size=node_sizes, with_labels=False)
@@ -207,7 +207,7 @@ if __name__ == "__main__":
     
     # Save the frames as a GIF
     frames[0].save(
-        'output.gif', 
+        'MNIST_superpixels.gif', 
         format='GIF',
         append_images=frames[1:], 
         save_all=True, 
