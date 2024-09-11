@@ -64,10 +64,24 @@ In other words, $\boldsymbol{\delta}_{\text{adv}}(\mathbf{x} ; f)$ is a perturba
 
 An adversarial distance, $\delta_{\text{adv}}(\mathbf{x} ; f)$ is defined as:
 $$
-\delta_{\text{adv}}(\mathbf{x} ; f)=\|\boldsymbol{\delta}_{\text{adv}}(\mathbf{x} ; f)\|=\min _{\boldsymbol{\delta} \in \mathbb{R}^d}\|\boldsymbol{\delta}\| : F(\mathbf{x}+\boldsymbol{\delta})=0
+\delta_{\text{adv}}(\mathbf{x} ; f)=\|\boldsymbol{\delta}_{\text{adv}}(\mathbf{x} ; f)\|=\operatorname{\min} _{\boldsymbol{\delta} \in \mathbb{R}^d}\|\boldsymbol{\delta}\| : F(\mathbf{x}+\boldsymbol{\delta})=0
 $$
 
-In other words, $\delta_{\text{adv}}(\mathbf{x} ; f)$ is the minimal length of a perturbation to the decision boundary. Given $\alpha \in \mathbb{R}$, if $\alpha \geq \delta_{\text{adv}}(\mathbf{x} ; f)$, then $\exists \boldsymbol{\delta} \in \mathbb{S}=\{\mathbf{x} \in \mathbb{R}^d \mid\|\mathbf{x}\|=1\}$ such that $F(\mathbf{x}+\alpha \boldsymbol{\delta})=$ 0 . On the other hand, if $\alpha<\delta_{\text{adv}}(\mathbf{x} ; f), \forall \boldsymbol{\delta} \in \mathbb{S}$ we have that $F(\mathbf{x}+\alpha \boldsymbol{\delta}) \neq 0$. All perturbations of magnitude less than $\alpha$ cannot reach the decision boundary B . The larger the value of $\delta_{\text{adv}}(\mathbf{x} ; f)$, the more robust we say the point $\mathbf{x} \in \mathbb{R}^d$ is to adversarial perturbations.
+In other words, $\delta_{\text{adv}}(\mathbf{x} ; f)$ is the minimal length of a perturbation to the decision boundary. Given $\alpha \in \mathbb{R}$, if $\alpha \geq \delta_{\text{adv}}(\mathbf{x} ; f)$, then $\exists \boldsymbol{\delta} \in \mathbb{S}=\{\mathbf{x} \in \mathbb{R}^d : \|\mathbf{x}\|=1\}$ such that $F(\mathbf{x}+\alpha \boldsymbol{\delta})=$ 0 . On the other hand, if $\alpha<\delta_{\text{adv}}(\mathbf{x} ; f), \forall \boldsymbol{\delta} \in \mathbb{S}$ we have that $F(\mathbf{x}+\alpha \boldsymbol{\delta}) \neq 0$. All perturbations of magnitude less than $\alpha$ cannot reach the decision boundary $B$ . The larger the value of $\delta_{\text{adv}}(\mathbf{x} ; f)$, the more robust we say the point $\mathbf{x} \in \mathbb{R}^d$ is to adversarial perturbations.
+
+
+An adversarial attack is a minimal perturbation. For a random perturbation, given a rate of misclassification $\epsilon \in [0, 1]$,  and a measure $\mu$, $\Delta_{\mu, \varepsilon}(\mathbf{x} ; f)$ denotes the maximal radius of the sphere centred at $\mathbf{x}\in\mathbb{R}^{d}$ such that the probability of misclassification of datapoints on $\mathbf{x} + \delta\mathbb{S}$ is less than or equal to $\epsilon$. Note that $\mathbb{S}$ denotes the unit sphere centred at the origin in $\mathbb{R}^{d}$. 
+
+$$\Delta_{\mu, \varepsilon}(\mathbf{x} ; f)=\max_{\boldsymbol{\delta} \in \delta\mathbb{S}} \delta \ : \ \mathbb{P}_{\delta\mathbb{S}} \left(\arg \max _{k} f_{k}(\mathbf{x})=\hat{k}(\mathbf{x}) \neq \hat{k}(\mathbf{x}+\boldsymbol{\delta})\right) \leqslant \varepsilon$$ 
+
+## Questions we hope to answer
+
+- Can we replicate and compare well known robustness results with deterministic algorithms and non-deterministic algorithms? What is the extent of the divergence, if any? Loop over hardware, ask @asedova and @mtaillefumier for help running experiments.
+- Can we repeat something like the permutations of the array for the sum we started the last paper with?  Given a simple model, we implement its logic with random permutations of arrays (that are about to be summed), then we can see theoretical variations through the model.
+- Do certifiable / provable robust bounds hold with FPNA run-by-run variability. @sanjif-shanmugavelu suspects these bounds should also be a function of hardware/datatype.
+- Can we extend this to the regression case? Ask @asedova for papers.
+- Does adversarial training help with FPNA attacks? Does adversarial training on machine A translate to similar robustness on machine B when A =! B
+Random perturbation training has shown to improve robustness, can training with non-deterministic algorithms help in a similar vein? Compare the two forms of adversarial training. 
 
 
 
