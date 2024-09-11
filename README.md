@@ -76,12 +76,11 @@ $$\Delta_{\mu, \varepsilon}(\mathbf{x} ; f)=\max_{\boldsymbol{\delta} \in \delta
 
 ## Questions we hope to answer
 
-- Can we replicate and compare well known robustness results with deterministic algorithms and non-deterministic algorithms? What is the extent of the divergence, if any? Loop over hardware, ask @asedova and @mtaillefumier for help running experiments.
-- Can we repeat something like the permutations of the array for the sum we started the last paper with?  Given a simple model, we implement its logic with random permutations of arrays (that are about to be summed), then we can see theoretical variations through the model.
+- Robustness bounds and results have been studied extensively in the case of inpt variability. These bounds do not include the effects of to run-by-run FPNA variability. Can we replicate and compare well known robustness results with deterministic algorithms and non-deterministic algorithms? What is the extent of the divergence, if any? Loop over hardware, ask @asedova and @mtaillefumier for help running experiments.
 - Do certifiable / provable robust bounds hold with FPNA run-by-run variability. @sanjif-shanmugavelu suspects these bounds should also be a function of hardware/datatype.
 - Can we extend this to the regression case? Ask @asedova for papers.
-- Does adversarial training help with FPNA attacks? Does adversarial training on machine A translate to similar robustness on machine B when A =! B
-Random perturbation training has shown to improve robustness, can training with non-deterministic algorithms help in a similar vein? Compare the two forms of adversarial training. 
+- Does adversarial training help with FPNA attacks? Does adversarial training on machine $A$ translate to similar robustness on machine $B$ when $A \neq B$.
+- Random perturbation training has shown to improve robustness, can training with non-deterministic algorithms help in a similar vein? Compare the two forms of adversarial training. 
 
 
 
