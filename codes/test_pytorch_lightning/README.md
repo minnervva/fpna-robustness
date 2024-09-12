@@ -37,6 +37,12 @@ fpna_robustness/codes/
 
 ## USAGE
 
+Make sure you're in the right directory
+
+```bash
+cd /fpna-robustness/codes/test_pytorch_lightning/
+```
+
 Install the required packages using pip:
 
 ```bash
