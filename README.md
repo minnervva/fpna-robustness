@@ -50,9 +50,9 @@ For a given $\mathbf{x} \in \mathbf{R}^{d}$, the larger the value of $F(\mathbf{
 
 The decision boundary $B$ of a classifier $f$ is defined as the set of points $f$ is equally likely to classify into at least two *distinct* classes.
 
-$$ B = \{\mathbf{x} \in \mathbb{R}^{d} :  F(\mathbb{x} = 0)\} $$
+$$ B = \{\mathbf{x} \in \mathbb{R}^{d} :  F(\mathbf{x}) = 0\} $$
 
-$B$ splits the domain, $\mathbb{R}^{d}$ into subspaces of similar classification, $C_{k} = \{ \mathbf{x} \in \mathbb{R}^{d} : \hat{k}(\mathbf{x} =k), 1 \leq k \leq L\}$ Therefore, assuming each $C_{k}$ has non-empty interior, $\mathbf{R}^{d} \setminus B = \bigcup_{k=1}^{L} C_{k}$. In particular, $\mathbf{x} \notin B$ implies $x \in C_{k}$. Given $x \in \mathbb{R}^{d}$, a perturbation $\delta({\mathbf{x}}) \in \mathbb{R}^{d}$ such that $\mathbf{x} + \delta({\mathbf{x}}) \in B$, we have that $\mathbf{x} + \delta({\mathbf{x}})$ is on the boundary of misclassification. Hence, when considering misclassification, we study properties of the decision boundary $B$.
+$B$ splits the domain, $\mathbb{R}^{d}$ into subspaces of similar classification, $C_{k} = \{ \mathbf{x} \in \mathbb{R}^{d} : \hat{k}(\mathbf{x}) =k, 1 \leq k \leq L\}$ Therefore, assuming each $C_{k}$ has non-empty interior, $\mathbf{R}^{d} \setminus B = \bigcup_{k=1}^{L} C_{k}$. In particular, $\mathbf{x} \notin B$ implies $x \in C_{k}$. Given $x \in \mathbb{R}^{d}$, a perturbation $\delta({\mathbf{x}}) \in \mathbb{R}^{d}$ such that $\mathbf{x} + \delta({\mathbf{x}}) \in B$, we have that $\mathbf{x} + \delta({\mathbf{x}})$ is on the boundary of misclassification. Hence, when considering misclassification, we study properties of the decision boundary $B$.
 
 An adversarial perturbation, $\boldsymbol{\delta}_{\text{adv}}(\mathbf{x}; f)$ is defined by the following optimisation problem:
 
@@ -72,12 +72,11 @@ In other words, $\delta_{\text{adv}}(\mathbf{x} ; f)$ is the minimal length of a
 
 An adversarial attack is a minimal perturbation. For a random perturbation, given a rate of misclassification $\epsilon \in [0, 1]$,  and a measure $\mu$, $\Delta_{\mu, \varepsilon}(\mathbf{x} ; f)$ denotes the maximal radius of the sphere centred at $\mathbf{x}\in\mathbb{R}^{d}$ such that the probability of misclassification of datapoints on $\mathbf{x} + \delta\mathbb{S}$ is less than or equal to $\epsilon$. Note that $\mathbb{S}$ denotes the unit sphere centred at the origin in $\mathbb{R}^{d}$. 
 
-$$\Delta_{\mu, \varepsilon}(\mathbf{x} ; f)=\max_{\boldsymbol{\delta} \in \delta\mathbb{S}} \delta \ : \ \mathbb{P}_{\delta\mathbb{S}} \left(\arg \max _{k} f_{k}(\mathbf{x})=\hat{k}(\mathbf{x}) \neq \hat{k}(\mathbf{x}+\boldsymbol{\delta})\right) \leqslant \varepsilon$$ 
+$$\Delta_{\mu, \varepsilon}(\mathbf{x} ; f)=\max_{\boldsymbol{\delta} \in \delta\mathbb{S}} \|\boldsymbol{\delta}\| \ : \ \mathbb{P}_{\delta\mathbb{S}} \left(\arg \max _{k} f_{k}(\mathbf{x})=\hat{k}(\mathbf{x}) \neq \hat{k}(\mathbf{x}+\boldsymbol{\delta})\right) \leqslant \varepsilon$$ 
 
 ## Questions we hope to answer
 
 - Robustness bounds and results have been studied extensively in the case of inpt variability. These bounds do not include the effects of to run-by-run FPNA variability. Can we replicate and compare well known robustness results with deterministic algorithms and non-deterministic algorithms? What is the extent of the divergence, if any? Loop over hardware, ask @asedova and @mtaillefumier for help running experiments.
-- Do certifiable / provable robust bounds hold with FPNA run-by-run variability. @sanjif-shanmugavelu suspects these bounds should also be a function of hardware/datatype.
 - Can we extend this to the regression case? Ask @asedova for papers.
 - Does adversarial training help with FPNA attacks? Does adversarial training on machine $A$ translate to similar robustness on machine $B$ when $A \neq B$.
 - Random perturbation training has shown to improve robustness, can training with non-deterministic algorithms help in a similar vein? Compare the two forms of adversarial training. 

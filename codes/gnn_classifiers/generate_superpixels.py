@@ -23,11 +23,11 @@ def generate_graph_from_image(image: torch.tensor, nodes: int=75, slic_zero: boo
     
     segments = slic(image, n_segments=nodes, slic_zero=slic_zero, channel_axis=channel_axis)
     segments = np.array(segments)   
-    print(segments)
-    print(segments.shape)
+    # print(segments)
+    # print(segments.shape)
 
     number_nodes = np.max(segments)
-    print(number_nodes)
+    # print(number_nodes)
    
     nodes = {
         node : {
@@ -77,7 +77,7 @@ def generate_graph_from_image(image: torch.tensor, nodes: int=75, slic_zero: boo
 
     # Generate edges
     segments_ids = np.unique(segments)
-    print(segments_ids)
+    # print(segments_ids)
 
     vs_right = np.vstack([segments[:, :-1].ravel(), segments[:, 1:].ravel()])
     vs_below = np.vstack([segments[:-1, :].ravel(), segments[1:, :].ravel()])
@@ -93,7 +93,7 @@ def generate_graph_from_image(image: torch.tensor, nodes: int=75, slic_zero: boo
         
     # Remove non-connected nodes
     isolated_nodes = list(nx.isolates(G))
-    print(f"Removing isolated nodes: {isolated_nodes}")
+    # print(f"Removing isolated nodes: {isolated_nodes}")
     G.remove_nodes_from(isolated_nodes)
     
     # Remove node 0 explicitly
@@ -115,7 +115,7 @@ def generate_graph_from_image(image: torch.tensor, nodes: int=75, slic_zero: boo
         edges[m + e, 0] = t
         edges[m + e, 1] = s
         
-    print(G.nodes(data=True)) 
+    # print(G.nodes(data=True)) 
     
     for i in G.nodes:
         if "features" in G.nodes[i] and len(G.nodes[i]["features"]) > 0:
@@ -168,7 +168,7 @@ def visualize(image, graph, h):
     
 if __name__ == "__main__":
     frames = []  # List to store the frames for the GIF
-    dataset = FashionMNIST(root="./data", download=True, train=False)
+    dataset = MNIST(root="./data", download=True, train=False)
     
     for i in range(10):    
         image = np.array(dataset.__getitem__(i)[0])
@@ -180,10 +180,10 @@ if __name__ == "__main__":
         else:
             grayscale = False
 
-        print(image.shape)
+        # print(image.shape)
         G, h, edges = generate_graph_from_image(image, grayscale=grayscale)
-        print(h.shape, edges.shape)
-        print(h, edges)
+        # print(h.shape, edges.shape)
+        # print(h, edges)
         
         G.remove_node(0)
         

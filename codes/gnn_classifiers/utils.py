@@ -6,17 +6,17 @@ from torch.nn import functional as F
 from torchvision.datasets import MNIST
 from torchvision import transforms
 import os
+from tqdm import tqdm
+import pandas as pd
 
-class LightningMNISTClassifier(pl.LightningModule):
-
-    def __init__(self, epsilon=0.1):
+class MNISTModel(nn.Module):
+    def __init__(self):
         super().__init__()
 
         # mnist images are (1, 28, 28) (channels, width, height)
         self.layer_1 = torch.nn.Linear(28 * 28, 128)
         self.layer_2 = torch.nn.Linear(128, 256)
         self.layer_3 = torch.nn.Linear(256, 10)
-        self.epsilon = epsilon  # Perturbation scale for FGSM
 
     def forward(self, x):
         batch_size, channels, width, height = x.size()
@@ -39,20 +39,26 @@ class LightningMNISTClassifier(pl.LightningModule):
         x = torch.log_softmax(x, dim=1)
 
         return x
+    
+class LightningMNISTClassifier(pl.LightningModule):
 
+    def __init__(self, model: nn.Module):
+        super().__init__()
+        self.model = model
+        
     def cross_entropy_loss(self, logits, labels):
         return F.nll_loss(logits, labels)
 
     def training_step(self, train_batch, batch_idx):
         x, y = train_batch
-        logits = self.forward(x)
+        logits = self.model.forward(x)
         loss = self.cross_entropy_loss(logits, y)
         self.log('train_loss', loss)
         return loss
 
     def validation_step(self, val_batch, batch_idx):
         x, y = val_batch
-        logits = self.forward(x)
+        logits = self.model.forward(x)
         loss = self.cross_entropy_loss(logits, y)
         self.log('val_loss', loss)
 
@@ -60,8 +66,8 @@ class LightningMNISTClassifier(pl.LightningModule):
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
         return optimizer
 
-    def adversarial_attack(self, attack_fn):
-        print(f"Running adversarial attack using {attack_fn.__name__} with epsilon={self.epsilon}")
+    def adversarial_attack(self, attack_fn, epsilon_list, log_path):
+        # print(f"Running adversarial attack using {attack_fn.__name__} with epsilon={epsilon_list}")
         
         # Create a dataloader to fetch validation data
         data_loader = self.trainer.datamodule.val_dataloader()
@@ -76,35 +82,40 @@ class LightningMNISTClassifier(pl.LightningModule):
         total_correct = 0
         total_samples = 0
 
+        results = list([])
+        
         #TODO: be smnart about inputs
-        for batch in data_loader:
-            x, y = batch
+        for epsilon in tqdm(epsilon_list):
+            for batch in data_loader:
+                x, y = batch
+                # Move inputs and labels to the same device as the model
+                x, y = x.to(device), y.to(device) 
 
-            # Move inputs and labels to the same device as the model
-            x, y = x.to(device), y.to(device)
+                # Generate adversarial examples using the passed attack function
+                x_adv = attack_fn(self.model, x, y, epsilon)
 
-            # Generate adversarial examples using the passed attack function
-            x_adv = attack_fn(self, x, y, self.epsilon)
+                # Forward pass the adversarial examples to see how the model performs
+                adv_logits = self.model.forward(x_adv)
+                baseline_logits = self.model.forward(x)
+                
+                # Compute accuracy on adversarial examples
+                preds = adv_logits.argmax(dim=1)
+                baseline_preds = baseline_logits.argmax(dim=1)
+                # print(baseline, preds)
+                total_correct += (preds == baseline_preds).sum().item()
+                total_samples += x.size(0)
 
-            # Forward pass the adversarial examples to see how the model performs
-            adv_logits = self.forward(x_adv)
-
-            # Compute accuracy on adversarial examples
-            preds = adv_logits.argmax(dim=1)
-            total_correct += (preds == y).sum().item()
-            total_samples += x.size(0)
-
-        accuracy = total_correct / total_samples
+            accuracy = total_correct / total_samples
+            results.append({"epsilon": epsilon, "accuracy": accuracy})
         
-        # Log the adversarial attack accuracy
-        # self.logger.experiment('adversarial_attack_accuracy', accuracy)
-        self.logger.experiment.add_scalar('adversarial_attack_accuracy', accuracy)
-        
-        print(f"Adversarial Attack Accuracy: {accuracy * 100:.2f}%")
-
-    def on_train_end(self):
-        # By default, pass FGSM as the attack function, but you can change it to other attacks
-        self.adversarial_attack(fgsm_attack)
+            # Log the adversarial attack accuracy
+            # self.logger.experiment('adversarial_attack_accuracy', accuracy)
+            # self.logger.experiment.add_scalar('adversarial_attack_accuracy', accuracy, epsilon)
+            # self.log(f'adversarial_attack_accuracy_epsilon_{epsilon}', accuracy, on_step=False, on_epoch=True)
+        df_results = pd.DataFrame(results)
+    
+    # Save the DataFrame as a CSV file
+        df_results.to_csv(f"{log_path}/{attack_fn.__name__}.csv", index=False)
         
 # Define the FGSM attack
 def fgsm_attack(model, x, y, epsilon):
@@ -139,39 +150,66 @@ def fgsm_attack(model, x, y, epsilon):
     
     return x_adv
 
-class MNISTDataModule(pl.LightningDataModule):
+# class MNISTDataModule(pl.LightningDataModule):
 
-  def setup(self, stage):
-    # transforms for images
-    transform=transforms.Compose([transforms.ToTensor(), 
-                                  transforms.Normalize((0.1307,), (0.3081,))])
+#   def setup(self, stage=None):
+#     # transforms for images
+#     transform=transforms.Compose([transforms.ToTensor(), 
+#                                   transforms.Normalize((0.1307,), (0.3081,))])
       
-    # prepare transforms standard to MNIST
-    self.mnist_train = MNIST(os.getcwd(), train=True, download=True, transform=transform)
-    self.mnist_test = MNIST(os.getcwd(), train=False, download=True, transform=transform)
+#     # prepare transforms standard to MNIST
+#     self.mnist_train = MNIST(os.getcwd(), train=True, download=True, transform=transform)
+#     self.mnist_test = MNIST(os.getcwd(), train=False, download=True, transform=transform)
 
-  def train_dataloader(self):
-    return DataLoader(self.mnist_train, batch_size=64)
+#   def train_dataloader(self):
+#     return DataLoader(self.mnist_train, batch_size=64)
 
-  def val_dataloader(self):
-    return DataLoader(self.mnist_test, batch_size=64)
+#   def val_dataloader(self):
+#     return DataLoader(self.mnist_test, batch_size=64)
 
-
+class DataModule(pl.LightningDataModule):
+    
+    def __init__(self, train_dataloader, val_dataloader):
+        super(DataModule, self).__init__()
+        self.train = train_dataloader
+        self.val = val_dataloader
+        # self.test = test_dataloader
+    
+    def setup(self, stage):
+        pass
+            
+    def train_dataloader(self):
+        return self.train
+    
+    def val_dataloader(self):
+        return self.val
+    
+    # def test_dataloader(self):
+    #     return self.test
+        
+        
 # Initialize data module
-data_module = MNISTDataModule()
+# data_module = MNISTDataModule()
+
+transform=transforms.Compose([transforms.ToTensor(), 
+                            transforms.Normalize((0.1307,), (0.3081,))])
+mnist_train = DataLoader(MNIST(os.getcwd(), train=True, download=True, transform=transform), batch_size=64)
+mnist_test = DataLoader(MNIST(os.getcwd(), train=False, download=True, transform=transform), batch_size=64)
+
+data_module = DataModule(mnist_train, mnist_test)
 
 # Initialize model with a chosen epsilon for adversarial attacks
-model = LightningMNISTClassifier(epsilon=0.25)
+model = LightningMNISTClassifier(MNISTModel())
 
-logger = pl.loggers.TensorBoardLogger("tb_logs", name="mnist_model")
+# logger = pl.loggers.TensorBoardLogger("tb_logs", name="mnist_model")
 csv_logger = pl.loggers.CSVLogger("csv_logs", name="mnist_model")
 
 # Train the model
-trainer = pl.Trainer(max_epochs=10, logger=logger)
+trainer = pl.Trainer(max_epochs=10, logger=csv_logger)
 
 # Training and the adversarial attack will automatically be called after training is done
 trainer.fit(model, data_module)
 
 # After training, call different attacks (can be done manually after training as well)
-model.adversarial_attack(fgsm_attack)  # FGSM attack
+model.adversarial_attack(fgsm_attack, epsilon_list=[i * 1e-12 for i in range(0, int(1e3), int(1e2))], log_path=f"./csv_logs/mnist_model/version_{trainer.logger.version}")  # FGSM attack
 # model.adversarial_attack(other_attack_fn)  # Another attack
