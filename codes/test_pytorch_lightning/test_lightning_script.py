@@ -10,19 +10,17 @@ import pandas as pd
 from utils.utils import *  # Import your utility functions
 from attacks.attacks import *  # Import your attack functions
 from models.models import *  # Import your models
+from data_and_transforms.data_and_transforms import * # Import data
 
 def main(args):
     # Setup data transformations and DataLoader
-    transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize((0.1307,), (0.3081,))
-    ])
+    
     mnist_train = DataLoader(
-        MNIST(os.getcwd(), train=True, download=True, transform=transform),
+        mnist_train_data,
         batch_size=args.batch_size
     )
     mnist_test = DataLoader(
-        MNIST(os.getcwd(), train=False, download=True, transform=transform),
+        mnist_test_data,
         batch_size=args.batch_size
     )
 
@@ -62,7 +60,7 @@ if __name__ == "__main__":
     
     # Add arguments for batch_size, max_epochs, experiment_name, log_dir, and devices
     parser.add_argument('--batch_size', type=int, default=64, help='Batch size for training and testing')
-    parser.add_argument('--max_epochs', type=int, default=10, help='Number of epochs for training')
+    parser.add_argument('--max_epochs', type=int, default=1, help='Number of epochs for training')
     parser.add_argument('--experiment_name', type=str, default='mnist_model', help='Name of the experiment for logging')
     parser.add_argument('--log_dir', type=str, default='csv_logs', help='Directory to save logs')
     parser.add_argument('--devices', type=int, default=1, help='Number of GPUs to use (0 for CPU)')
