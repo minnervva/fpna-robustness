@@ -13,22 +13,38 @@ from models.models import *  # Import your models
 from data_and_transforms.data_and_transforms import *  # Import data
 
 
-def MNIST_data_module():
-    mnist_train = DataLoader(mnist_train_data, batch_size=args.batch_size)
-    mnist_test = DataLoader(mnist_test_data, batch_size=args.batch_size)
+def MNIST_data_module(batch_size):
+    mnist_train = DataLoader(mnist_train_data, batch_size)
+    mnist_test = DataLoader(mnist_test_data, batch_size)
 
     # Initialize data module
     data_module = LightningDataModule(mnist_train, mnist_test)
     return data_module
 
 
+def get_astro_data_module(batch_size):
+    features, classes, train_loader, test_loader = get_astro_data(
+        batch_size, batch_size
+    )
+
+    return LightningDataModule(train_loader, test_loader)
+
+
 def main(args):
     # Setup data transformations and DataLoader
 
-    dataset_dispatcher = {"MNIST": MNIST_data_module}
-    model_dispatcher = {"MNISTModel": MNISTModel}
+    dataset_dispatcher = {
+        "MNIST": MNIST_data_module,
+        "ASTRO": get_astro_data_module,
+    }
+    model_dispatcher = {
+        "MNIST": MNISTClassifier,
+        "AtomicMNIST": AtomicMNISTClassifier,
+        "ASTRO": AstroClassifier,
+        "AtomicASTRO": AtomicAstroClassifier,
+    }
 
-    data_module = dataset_dispatcher[args.dataset]()
+    data_module = dataset_dispatcher[args.dataset](args.batch_size)
     # Initialize model with a chosen epsilon for adversarial attacks
     model = LightningClassifier(model_dispatcher[args.model]())
 
