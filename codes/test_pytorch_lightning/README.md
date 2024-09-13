@@ -56,6 +56,8 @@ python test_lightning_script.py --batch_size <batch_size> --max_epochs <max_epoc
 ```
 
 Arguments
+- dataset: Name of dataset to analyze
+- model: Name of model to run on the dataset
 - batch_size: Batch size for training and testing (default: 64)
 - max_epochs: Number of epochs for training (default: 10)
 - experiment_name: Name of the experiment for logging (default: 'mnist_model')
@@ -67,5 +69,12 @@ Arguments
 To train the model with a batch size of 32, for 20 epochs, log results to my_logs directory, name the experiment my_experiment, and use 2 GPUs, you would run:
 
 ```bash
-python test_lightning_script.py --batch_size 32 --max_epochs 20 --experiment_name my_experiment --log_dir my_logs --devices 2
+python test_lightning_script.py --dataset=MNIST --model=MNISTModel
 ```
+
+
+```bash
+python test_lightning_script.py --dataset=MNIST --model=MNISTModel --batch_size 32 --max_epochs 20 --experiment_name my_experiment --log_dir my_logs --devices 2
+```
+
+
