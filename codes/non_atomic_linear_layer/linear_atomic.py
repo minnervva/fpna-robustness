@@ -1,4 +1,8 @@
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torchvision import datasets, transforms
+from torch.utils.data import DataLoader
 from utilities import *
 import random
 
@@ -81,7 +85,81 @@ class AtomicLinearTest(torch.nn.Module):
             # print((x[:,None,:]*self.weight).shape)
             prod = torch.gather(y, dim=2, index=indices)
         return prod.sum(dim=2) + self.bias[None, :]
+    
 
+class LearnablePermutation(torch.nn.Module):
+    def __init__(self, in_features, temperature=1.0):
+        super(LearnablePermutation, self).__init__()
+        self.in_features = in_features
+        self.temperature = temperature
+        self.logits = torch.nn.Parameter(torch.randn(in_features, in_features))
+
+    def forward(self):
+        if self.training:
+            gumbel_noise = -torch.log(-torch.log(torch.rand_like(self.logits)))
+            perm_matrix = F.softmax((self.logits + gumbel_noise) / self.temperature, dim=-1)
+        else:
+            perm_matrix = torch.zeros_like(self.logits)
+            hard_perm = torch.argsort(self.logits, dim=-1)
+            perm_matrix.scatter_(1, hard_perm, 1.0) 
+        return perm_matrix
+  
+    
+class AtomicLinearLearnablePermutation(torch.nn.Module):
+    def __init__(self, in_features, out_features, temperature=1.0):
+        super(AtomicLinearLearnablePermutation, self).__init__()
+        self.in_features = in_features
+        self.out_features = out_features
+        self.weight = torch.nn.Parameter(torch.randn(out_features, in_features))
+        self.bias = torch.nn.Parameter(torch.randn(out_features))
+        self.permutation = LearnablePermutation(in_features, temperature)
+
+    def forward(self, x):
+        y = x[:, None, :] * self.weight
+        perm_matrix = self.permutation()
+        permuted_y = torch.matmul(y, perm_matrix)
+        return permuted_y.sum(dim=2) + self.bias[None, :]
+    
+
+class AtomicLinear(torch.nn.Module):
+    def __init__(self, in_features, out_features, temperature=1.0):
+        super(AtomicLinear, self).__init__()
+        self.in_features = in_features
+        self.out_features = out_features
+        
+        # Learnable weight and bias
+        self.weight = torch.nn.Parameter(torch.randn(out_features, in_features))
+        self.bias = torch.nn.Parameter(torch.randn(out_features))
+
+        # Learnable permutation module
+        self.permutation = LearnablePermutation(in_features, temperature)
+
+    def forward(self, x):
+        # x has shape [batch_size, in_features]
+        y = x[:, None, :] * self.weight  # Shape: [batch_size, out_features, in_features]
+
+        # Get the permutation matrix (either differentiable or hard, depending on mode)
+        perm_matrix = self.permutation()  # Shape: [in_features, in_features]
+
+        # Apply the permutation matrix to the input features
+        permuted_y = torch.matmul(y, perm_matrix)  # Shape: [batch_size, out_features, in_features]
+
+        return permuted_y.sum(dim=2) + self.bias[None, :]  # Shape: [batch_size, out_features]
+
+class MNISTClassifierAtomicLinearLearnablePermutation(torch.nn.Module):
+    def __init__(self, temperature=1.0):
+        super(MNISTClassifierAtomicLinearLearnablePermutation, self).__init__()
+        self.fc1 = AtomicLinearLearnablePermutation(28 * 28, 256, temperature)
+        self.fc2 = AtomicLinearLearnablePermutation(256, 128, temperature)      
+        self.fc3 = AtomicLinearLearnablePermutation(128, 10, temperature)                                          
+
+    def forward(self, x):
+        x = x.view(-1, 28 * 28)  # Flatten the image
+        x = F.relu(self.fc1(x))  # Apply first atomic linear layer and ReLU
+        x = F.relu(self.fc2(x))  # Apply second atomic linear layer and ReLU
+        x = self.fc3(x)          # Output layer for classification
+        return x
+    
 
 class Classifier(torch.nn.Module):
     def __init__(self, atomics, nfeatures, nclasses, nhidden):
@@ -180,3 +258,44 @@ def train_new_model(atomics: bool, nfeatures:int, nclasses:int, nhidden: int,tra
         accuracy_history.append(100.0*(float(correct)/float(total)))
 
     return model, loss_history, accuracy_history
+
+# Load the MNIST dataset
+def load_mnist(batch_size=64):
+    transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
+    train_dataset = datasets.MNIST(root='./data', train=True, transform=transform, download=True)
+    test_dataset = datasets.MNIST(root='./data', train=False, transform=transform)
+    
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+    return train_loader, test_loader
+
+# Training loop
+def train_learnable_permutation(model, train_loader, optimizer, criterion, num_epochs=10):
+    model.train()
+    for epoch in range(num_epochs):
+        running_loss = 0.0
+        for images, labels in train_loader:
+            optimizer.zero_grad()
+            outputs = model(images)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+            running_loss += loss.item()
+        print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {running_loss/len(train_loader):.4f}")
+
+# Testing loop
+def test_learnable_permutation(model, test_loader, criterion):
+    model.eval()
+    correct = 0
+    total = 0
+    test_loss = 0.0
+    with torch.no_grad():
+        for images, labels in test_loader:
+            outputs = model(images)
+            loss = criterion(outputs, labels)
+            test_loss += loss.item()
+            _, predicted = torch.max(outputs, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+    accuracy = 100 * correct / total
+    print(f"Test Accuracy: {accuracy:.2f}%, Test Loss: {test_loss/len(test_loader):.4f}")
