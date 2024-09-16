@@ -22,7 +22,7 @@ class AtomicLinear(torch.nn.Module):
         # return x.matmul(self.weight.t()) + self.bias
         # percent_flipped = 0.5
         # [0,1,2,3] + torch.randperm([4,5,6,7])
-        y=x[:, None, :] * self.weight
+        y=x.unsqueeze(dim=1) * self.weight
         #with torch.no_grad():
         indices = torch.randperm(self.in_features)
         #print(indices)
