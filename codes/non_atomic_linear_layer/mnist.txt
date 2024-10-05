@@ -1,0 +1,42 @@
+/home/sshanmugavelu/fpna-robustness/codes/non_atomic_linear_layer/linear_atomic.py:284: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  checkpoint = torch.load(checkpoint_path)
+Pred: tensor([6], device='cuda:0'), Target: tensor([6], device='cuda:0')
+Pred: tensor([6], device='cuda:0'), Target: tensor([6], device='cuda:0')
+Pred: tensor([6], device='cuda:0'), Target: tensor([6], device='cuda:0')
+Traceback (most recent call last):
+  File "/home/sshanmugavelu/fpna-robustness/codes/non_atomic_linear_layer/linear_atomic_learnable_permutation.py", line 47, in <module>
+    maximize_loss_for_input(model, input_image, label, perm_optimizer, criterion, device, num_iterations=100)
+  File "/home/sshanmugavelu/fpna-robustness/codes/non_atomic_linear_layer/linear_atomic.py", line 416, in maximize_loss_for_input
+    output = model(input_image)
+             ^^^^^^^^^^^^^^^^^^
+  File "/home/sshanmugavelu/miniconda3/envs/det/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1553, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sshanmugavelu/miniconda3/envs/det/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1562, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sshanmugavelu/fpna-robustness/codes/non_atomic_linear_layer/linear_atomic.py", line 163, in forward
+    x = F.relu(self.fc2(x))
+               ^^^^^^^^^^^
+  File "/home/sshanmugavelu/miniconda3/envs/det/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1553, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sshanmugavelu/miniconda3/envs/det/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1562, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sshanmugavelu/fpna-robustness/codes/non_atomic_linear_layer/linear_atomic.py", line 144, in forward
+    perm_matrix = self.permutation()
+                  ^^^^^^^^^^^^^^^^^^
+  File "/home/sshanmugavelu/miniconda3/envs/det/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1553, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sshanmugavelu/miniconda3/envs/det/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1562, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sshanmugavelu/fpna-robustness/codes/non_atomic_linear_layer/linear_atomic.py", line 117, in forward
+    self._validate_permutation_matrix(perm_matrix) 
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sshanmugavelu/fpna-robustness/codes/non_atomic_linear_layer/linear_atomic.py", line 123, in _validate_permutation_matrix
+    if not torch.allclose(row_sums, torch.ones_like(row_sums), atol=1e-5):
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt
