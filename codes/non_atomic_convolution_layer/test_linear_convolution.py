@@ -28,5 +28,9 @@ def test_linear_conv2d_vs_conv2d(in_channels, out_channels, kernel_size, stride,
 
     print(f"Passed for in_channels={in_channels}, out_channels={out_channels}, kernel_size={kernel_size}, stride={stride}, padding={padding}")
 
+def test_resnet18():
+    model = LinearResNet18(pretrained=True)
+    assert model(torch.randn(1, 3, 224, 224)) is not None
+    
 if __name__ == "__main__":
     pytest.main()

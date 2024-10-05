@@ -3,10 +3,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
+from scipy.optimize import linear_sum_assignment  # Hungarian Algorithm for evaluation
 from utilities import *
 import random
 import warnings
 from tqdm import tqdm
+from typing import Optional, Tuple, List, Callable
+from pathlib import Path
+import pandas as pd
 
 
 class AtomicLinear(torch.nn.Module):
@@ -102,14 +106,16 @@ class LearnablePermutation(torch.nn.Module):
             self.logits.data = torch.eye(self.in_features)
     
     def forward(self):
-        
         if self.training:
             gumbel_noise = -torch.log(-torch.log(torch.rand_like(self.logits)))
             perm_matrix = F.softmax((self.logits + gumbel_noise) / self.temperature, dim=-1)
         else:
+            # perm_matrix = torch.zeros_like(self.logits)
+            # hard_perm = torch.argsort(self.logits, dim=-1)
+            # perm_matrix.scatter_(1, hard_perm, 1.0)
             perm_matrix = torch.zeros_like(self.logits)
-            hard_perm = torch.argsort(self.logits, dim=-1)
-            perm_matrix.scatter_(1, hard_perm, 1.0)
+            row_indices, col_indices = linear_sum_assignment(-1 * self.logits.detach().cpu().numpy(), maximize=True)
+            perm_matrix[row_indices, col_indices] = 1.0
             
         self._validate_permutation_matrix(perm_matrix) 
         return perm_matrix
@@ -147,14 +153,22 @@ class MNISTClassifierAtomicLinearLearnablePermutation(torch.nn.Module):
     def __init__(self, temperature=1.0):
         super(MNISTClassifierAtomicLinearLearnablePermutation, self).__init__()
         self.fc1 = AtomicLinearLearnablePermutation(28 * 28, 256, temperature)
-        self.fc2 = AtomicLinearLearnablePermutation(256, 128, temperature)      
-        self.fc3 = AtomicLinearLearnablePermutation(128, 10, temperature)                                          
+        self.fc2 = AtomicLinearLearnablePermutation(256, 512, temperature)
+        self.fc3 = AtomicLinearLearnablePermutation(512, 1024, temperature)
+        self.fc4 = AtomicLinearLearnablePermutation(1024, 512, temperature)
+        self.fc5 = AtomicLinearLearnablePermutation(512, 256, temperature)
+        self.fc6 = AtomicLinearLearnablePermutation(256, 128, temperature)       
+        self.fc7 = AtomicLinearLearnablePermutation(128, 10, temperature)                                          
 
     def forward(self, x):
         x = x.view(-1, 28 * 28)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        x = self.fc3(x) 
+        x = F.relu(self.fc3(x))
+        x = F.relu(self.fc4(x))
+        x = F.relu(self.fc5(x))
+        x = F.relu(self.fc6(x))
+        x = self.fc7(x) 
         return x
     
 
@@ -258,110 +272,270 @@ def train_new_model(atomics: bool, nfeatures:int, nclasses:int, nhidden: int,tra
 
     return model, loss_history, accuracy_history
 
-# Load the MNIST dataset
-def load_mnist(batch_size=64):
+
+def load_mnist(batch_size: int = 64, dataset_path: str = None) -> Tuple[DataLoader, DataLoader]:
+    """Loads and Preprocesses MNIST dataset, returning DataLoaders for both the train and test set
+
+    Args:
+        batch_size (int, optional): _description_. Defaults to 64.
+        dataset_path (str, optional): _description_. Defaults to None.
+
+    Returns:
+        Tuple[DataLoader, DataLoader]: _description_
+    """
+    # Preprocessing, Normalising and converting default PIL Images to Torch Tensors
     transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
-    train_dataset = datasets.MNIST(root='./data', train=True, transform=transform, download=True)
-    test_dataset = datasets.MNIST(root='./data', train=False, transform=transform)
     
+    # Load and Save MNIST dataset, splitting into the train and test set 
+    train_dataset = datasets.MNIST(root=dataset_path, train=True, transform=transform, download=True)
+    test_dataset = datasets.MNIST(root=dataset_path, train=False, transform=transform)
+    
+    # Pass train and test sets into torch,utils.data DataLoaders
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+    
     return train_loader, test_loader
 
-def set_gpu_device():
-    if torch.cuda.is_available():
+def load_weights(model, checkpoint_path):
+    """ Load checkpoint weights into model, ignoring other artifacts
+
+    Args:
+        model (_type_): _description_
+        checkpoint_path (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    # Load the entire checkpoint
+    checkpoint = torch.load(checkpoint_path)
+
+    # Extract the model state dict from the checkpoint
+    if "model_state_dict" in checkpoint:
+        model_state_dict = checkpoint["model_state_dict"]
+    else:
+        model_state_dict = checkpoint  # If the checkpoint is a state dict itself
+
+    # Filter out unexpected keys
+    expected_keys = set(model.state_dict().keys())
+    filtered_state_dict = {k: v for k, v in model_state_dict.items() if k in expected_keys}
+
+    # Load the filtered state dict into the model
+    model.load_state_dict(filtered_state_dict)
+
+    return model
+
+def set_device(device: str = "cuda") -> torch.device:
+    """ Sets torch.device, defaulting to "cuda" 
+
+    Args:
+        device (str, optional): _description_. Defaults to "cuda".
+
+    Returns:
+        torch.device: _description_
+    """
+    if device == "cuda" and torch.cuda.is_available():
         device = torch.device("cuda")
     else:
-        torch.device("cpu")
-        warnings.warn("Warning: No GPU found, please note this will take a longgggg time")
+        device = torch.device("cpu")
+        warnings.warn("Warning: No GPU found, please note this will take a while")
+    return device
+
+
+def train_loop(
+    model: nn.Module,
+    train_loader: DataLoader,
+    optimiser: torch.optim,
+    criterion: torch.nn,
+    device: torch.device,
+    num_epochs: int,
+) -> None:
+    """ Generic boilerplate training loop
+
+    Args:
+        model (nn.Module): _description_
+        train_loader (DataLoader): _description_
+        optimiser (torch.optim): _description_
+        criterion (torch.nn): _description_
+        device (torch.device): _description_
+        num_epochs (int): _description_
+    """
+    
+    for epoch in tqdm(range(num_epochs)):
+        running_loss: float = 0.0
+        for images, labels in tqdm(train_loader):
+            
+            # Send data batches to device
+            images, labels = images.to(device), labels.to(device)
+            optimiser.zero_grad()
+            
+            # Calculate model output and loss 
+            logits = model(images)
+            loss = criterion(logits, labels)
+            
+            # Optimisation step
+            loss.backward() 
+            optimiser.step()
+            
+            # Add loss to running loss
+            running_loss += loss.item()
         
+        # Print running_loss at each epoch
+        print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {running_loss/len(train_loader):.4f}")
+
+    
 # Training loop
-def train_mnist(model, train_loader, optimizer, criterion, device, num_epochs=10, freeze_permutation=False):
+def train_module_with_learnable_permutation(
+    model: nn.Module,
+    train_loader: DataLoader,
+    optimiser: torch.optim,
+    criterion: torch.nn,
+    device: torch.device,
+    num_epochs: int=10,
+    freeze_permutation: bool=True,
+    checkpoint_path: Optional[Path] = Path("./non_atomic_linear_layer")
+    ) -> None:
+    """Train arbitrary classification model with learnable permutations
+
+    Args:
+        model (nn.Module): _description_
+        train_loader (DataLoader): _description_
+        optimiser (torch.optim): _description_
+        criterion (torch.nn): _description_
+        device (torch.device): _description_
+        num_epochs (int, optional): _description_. Defaults to 10.
+        freeze_permutation (bool, optional): _description_. Defaults to False.
+        checkpoint_path (str, optional): _description_. Defaults to "./non_atomic_linear_layer/MNISTClassifierLearnableParameters.pth".
+    """
+    
     model = model.to(device)
     model.train()
     
-    if freeze_permutation:
-        for layer in [model.fc1, model.fc2, model.fc3]:
-            for param in layer.permutation.parameters():
-                param.requires_grad = False
-    
-    for epoch in tqdm(range(num_epochs)):
-        running_loss = 0.0
-        for images, labels in tqdm(train_loader):
-            images, labels = images.to(device), labels.to(device)
-            optimizer.zero_grad()
-            outputs = model(images)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
-            running_loss += loss.item()
-        print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {running_loss/len(train_loader):.4f}")
+    freeze_permutations(
+        model=model,
+        freeze_permutation=freeze_permutation
+    )
         
-    torch.save(model.state_dict(), "./MNISTClassifierLearnableParameters.pth")
+    train_loop(
+        model=model,
+        train_loader=train_loader,
+        optimiser=optimiser,
+        criterion=criterion,
+        device=device,
+        num_epochs=num_epochs
+    )
+    
+    checkpoint_path = checkpoint_path / f"{model.__class__.__name__}.pth"
+    torch.save(model.state_dict(), checkpoint_path)
 
-# Testing loop
-def test_mnist(model, test_loader, criterion, device):
+
+def test_loop(
+    model: nn.Module, 
+    test_loader: DataLoader, 
+    criterion: torch.nn, 
+    device: torch.device,
+    return_accuracy: bool=False
+    ) -> None:
+    """ Test Module
+
+    Args:
+        model (nn.Module): _description_
+        test_loader (DataLoader): _description_
+        criterion (torch.nn): _description_
+        device (torch.device): _description_
+    """
+
     model = model.to(device)
     model.eval()
-    correct = 0
-    total = 0
-    test_loss = 0.0
-    with torch.no_grad():
+    
+    correct: int = 0
+    running_loss: float = 0.0
+    
+    with torch.no_grad(): # Don't track gradients
         for images, labels in tqdm(test_loader):
+            # Send data batch to device
             images, labels = images.to(device), labels.to(device)
-            outputs = model(images)
-            loss = criterion(outputs, labels)
-            test_loss += loss.item()
-            _, predicted = torch.max(outputs, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
-    accuracy = 100 * correct / total
-    print(f"Test Accuracy: {accuracy:.2f}%, Test Loss: {test_loss/len(test_loader):.4f}")
+            
+            # Calculate logits and loss
+            logits = model(images)
+            loss = criterion(logits, labels)
+            
+            # Update running loss
+            running_loss += loss.item()
+            
+            # Calculate predictions
+            pred = torch.argmax(logits, dim=1)
+            
+            # Calculate correct predictions
+            correct += (pred == labels).sum().item()
+            
+    accuracy = 100 * correct / len(test_loader)
+    print(f"Test Accuracy: {accuracy:.2f}%, Test Loss: {running_loss/len(test_loader):.4f}")
 
 
-def freeze_all_but_permutation(model):
-    for name, param in model.named_parameters():
-        if "permutation" not in name:
-            param.requires_grad = False
+def freeze_permutations(model: nn.Module, freeze_permutation: bool=True) -> None:
+    """ Freeze or unfreeze learnable permutation and other sub module ```requires_grad``` flag
+
+    Args:
+        model (nn.Module): _description_
+        freeze_permutation (bool): _description_
+    """
+    for module in model.modules():
+        if isinstance(module, LearnablePermutation):
+            for parameter in module.parameters():
+                parameter.requires_grad = not freeze_permutation  # Enable gradients for LearnablePermutation
         else:
-            param.requires_grad = True
+            for parameter in module.parameters():
+                parameter.requires_grad = freeze_permutation  # Disable gradients for all other modules
 
-
-# def maximize_loss_wrt_permutation(model, train_loader, optimizer, criterion, device, num_epochs=5):
-#     model.to(device)
-#     model.train()
-#     freeze_all_but_permutation(model)
-#     for epoch in tqdm(range(num_epochs)):
-#         running_loss = 0.0
-#         for images, labels in tqdm(train_loader):
-#             images, labels = images.to(device), labels.to(device)
-#             optimizer.zero_grad()
-#             outputs = model(images)
-#             loss = criterion(outputs, labels)
-#             loss = -loss
-#             loss.backward()
-#             optimizer.step()
-#             running_loss += -loss.item()
-#         print(f"Epoch [{epoch+1}/{num_epochs}], Maximized Loss: {running_loss / len(train_loader):.4f}")
         
-def maximize_loss_wrt_permutation(model, train_loader, optimizer, criterion, device, num_epochs=5, patience=3, checkpoint_path="/home/sshanmugavelu/fpna-robustness/codes/non_atomic_linear_layer/MNISTClassifierLearnableParameters.pth"):
+def maximize_loss_with_permutation(
+    model: nn.Module, 
+    train_loader: DataLoader, 
+    optimizer: torch.optim, 
+    criterion: torch.nn, 
+    device: torch.device, 
+    num_epochs: int=5, 
+    patience: int=3, 
+    checkpoint_path: Path= Path("./non_atomic_linear_layer")
+    )-> None:
+    """Maximise loss, backpropogating over permutation layers ONLY. Finds a single set of permutations
+    which maximise loss on a given dataset, with the goal of finding a global permutation which causes
+    classification flips.
+
+    Args:
+        model (nn.Module): _description_
+        train_loader (DataLoader): _description_
+        optimizer (torch.optim): _description_
+        criterion (torch.nn): _description_
+        device (torch.device): _description_
+        num_epochs (int, optional): _description_. Defaults to 5.
+        patience (int, optional): _description_. Defaults to 3.
+        checkpoint_path (Path, optional): _description_. Defaults to Path("./non_atomic_linear_layer").
+    """
+    
     model.to(device)
     model.train()
-    freeze_all_but_permutation(model)
+    
+    freeze_permutations(
+        model=model, 
+        freeze_permutation=True
+    )
 
-    best_loss = float('-inf')
-    epochs_without_improvement = 0
-
+    best_loss: float = float("-inf")
+    epochs_without_improvement: int = 0
+    checkpoint_path: Path = checkpoint_path / f"{model.__class__.__name__}.pth"
+    
     for epoch in tqdm(range(num_epochs)):
-        running_loss = 0.0
+        running_loss: float = 0.0
         for images, labels in tqdm(train_loader):
+            
             images, labels = images.to(device), labels.to(device)
             optimizer.zero_grad()
 
             outputs = model(images)
 
             loss = criterion(outputs, labels)
-            loss = -loss
+            loss = -loss # Use negative loss since we want to maximise loss
 
             loss.backward()
             optimizer.step()
@@ -389,21 +563,124 @@ def maximize_loss_wrt_permutation(model, train_loader, optimizer, criterion, dev
         if epochs_without_improvement >= patience:
             print(f"Stopping early after {patience} epochs of no increase.")
             break
-    
-    print("Loss maximisation complete.")
         
-def maximize_loss_for_input(model, input_image, label, optimizer, criterion, device, num_iterations=100):
+        
+def maximize_loss_fixed_input(
+    model: nn.Module, 
+    input_image: torch.Tensor,
+    label: torch.Tensor, 
+    optimizer: torch.optim,
+    criterion: torch.nn,
+    device: torch.device, 
+    iterations: int = 10
+    ) -> int:
+    """ Maximise loss with respect to a fixed input. Finds a set of permutations foer each input in the dataset
+    to maximise loss, with the goal of flipping a classification.
+
+    Args:
+        model (nn.Module): _description_
+        input_image (torch.Tensor): _description_
+        label (torch.Tensor): _description_
+        optimizer (torch.optim): _description_
+        criterion (torch.nn): _description_
+        device (torch.device): _description_
+        num_iterations (int, optional): _description_. Defaults to 1_000.
+    """
+    
     model.to(device)
     model.train()
-    freeze_all_but_permutation(model)
+    
+    freeze_permutations(model, False)
+    
     input_image, label = input_image.to(device), label.to(device)
-    for iteration in range(num_iterations):
+    
+    for iteration in range(iterations):
         optimizer.zero_grad()
-        output = model(input_image)
-        loss = criterion(output, label)
+        
+        logits = model(input_image)
+        loss = criterion(logits, label)
+        
         loss = -loss
-        loss.backward()
+        loss.backward(retain_graph=True)
+        
         optimizer.step()
-        running_loss = -loss.item()
-        print(f"Iteration [{iteration+1}/{num_iterations}], Maximized Loss: {running_loss:.4f}")
-    print("Maximization completed.")
+        # running_loss = -loss.item()
+        
+    # print(f"Pred: {torch.argmax(logits, dim=1)}, Target: {label}")
+    if label != torch.argmax(logits, dim=1):
+        print("Classification Flip!")
+        return 1
+    
+    return 0
+        
+def maximize_loss_fixed_adversarial_input(
+    model: nn.Module,
+    epsilons: List[float],
+    train_loader: DataLoader,
+    criterion: torch.nn,
+    device: torch.device,
+    optimiser: torch.optim,
+    attack_fn: Callable
+) -> None:
+    
+    model = model.to(device)
+    batch_size: int = next(iter(train_loader))[0].shape[0]
+    results: List = list([])
+    for epsilon in tqdm(epsilons):
+        baseline_correct: int = 0
+        permutation_correct: int = 0
+        for images, labels in tqdm(train_loader):
+            for i in tqdm(range(batch_size)):
+                image = images[i].unsqueeze(0).to(device)
+                label = labels[i].unsqueeze(0).to(device)
+                with torch.no_grad():
+                    pred = torch.argmax(model(image), dim=1) 
+                    baseline_correct += int(pred == label)
+                
+                attack_image = attack_fn(model, image, label, criterion, epsilon, device)
+                
+                with torch.no_grad():
+                    attack_label = torch.argmax(model(attack_image), dim=1)
+                    
+                permutation_correct = baseline_correct - maximize_loss_fixed_input(
+                    model, attack_image, attack_label, optimiser, criterion, device, iterations=100
+                )
+                
+                results.append({
+                    "epsilon": epsilon,
+                    "baseline_accuracy": baseline_correct/len(train_loader),
+                    "permutation_accuracy": permutation_correct/len(train_loader),
+                })
+                
+                df = pd.DataFrame(results)
+                
+    df.to_csv("./results.csv", index=False)
+    
+def fgsm_attack(model, x, y, criterion, epsilon, device):
+    
+    x = x.to(device)
+    y = y.to(device)
+    model.to(device)
+    
+    # Make sure x requires gradient
+    x.requires_grad = True
+
+    # Forward pass
+    logits = model(x)
+    
+    # Compute the loss
+    loss = criterion(logits, y)
+    
+    # Zero out previous gradients
+    model.zero_grad()
+    
+    # Compute gradients of the loss w.r.t. the input image
+    loss.backward()
+
+    # Create adversarial examples using the sign of the gradients
+    x_adv = x + epsilon * x.grad.sign()
+
+    # Ensure the values are still within [0, 1]
+    x_adv = torch.clamp(x_adv, 0, 1)
+    
+    return x_adv
