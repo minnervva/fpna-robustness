@@ -8,47 +8,90 @@ from torchvision import transforms
 import os
 from tqdm import tqdm
 import pandas as pd
-from typing import List, Callable
+from typing import List, Callable, Optional
 from models.models import freeze_permutations, fgsm_attack
 from pathlib import Path
 
 class LightningClassifier(pl.LightningModule):
-    def __init__(self, model: nn.Module, deterministic_train: bool=True, deterministic_test: bool=True, deterministic_attack: bool=True):
+    def __init__(
+        self,
+        model: nn.Module,
+        criterion: torch.nn = nn.CrossEntropyLoss(),
+        optimiser: torch.optim.Optimizer = torch.optim.SGD,
+        perm_optimiser: torch.optim.Optimizer = None,
+        deterministic_train: bool=True,
+        deterministic_test: bool=True,
+        deterministic_attack: bool=True
+    ):
         super().__init__()
-        self.model: nn.Module = model
-        self.criterion: torch.nn = nn.CrossEntropyLoss()
-        self.perm_optimiser =  torch.optim.SGD(
-            [param for name, param in model.named_parameters() if "permutation" in name], 
-            lr=1e-3
-        )
+        self.model = model
+        self.criterion = criterion
+        self.optimiser = optimiser
+        
+        try: 
+            self.perm_optimiser =  torch.optim.SGD(
+                [param for name, param in self.model.named_parameters() if "permutation" in name], 
+                lr=1e-3
+            )
+        except:
+           self.perm_optimiser = None 
+        
         self.deterministic_train = deterministic_train
         self.deterministic_test = deterministic_test
         self.deterministic_attack = deterministic_attack
-        
-    def loss(self, logits, labels):
+            
+    def loss(
+        self,
+        logits: torch.Tensor,
+        labels: torch.Tensor
+    ) -> float:
         return self.criterion(logits, labels)
 
-    def training_step(self, train_batch, batch_idx):
+    def training_step(
+        self,
+        train_batch: torch.Tensor,
+        batch_idx: int
+    ) -> float:
+        
         torch.use_deterministic_algorithms(self.deterministic_train)
+        
         x, y = train_batch
         freeze_permutations(self.model, freeze_permutation=True)
+        
         logits = self.model.forward(x)
         loss = self.loss(logits, y)
-        self.log('train_loss', loss)
+        
+        self.log("train_loss", loss)
+        
         return loss
 
-    def validation_step(self, val_batch, batch_idx):
+    def validation_step(
+        self,
+        val_batch: torch.Tensor,
+        batch_idx: int
+    ) -> None:
+        
         torch.use_deterministic_algorithms(self.deterministic_test)
+        
         x, y = val_batch
+        
         logits = self.model.forward(x)
         loss = self.loss(logits, y)
-        self.log('val_loss', loss)
+        
+        self.log("val_loss", loss)
 
-    def configure_optimizers(self):
-        optimiser = torch.optim.SGD(self.parameters(), lr=1e-3)
-        return optimiser
+    def configure_optimizers(
+        self
+    ) -> torch.optim:
+        return self.optimiser(self.model.parameters(), lr=1e-3)
 
-    def adversarial_attack(self, attack_fn, epsilon_list, log_path):
+    def adversarial_attack(
+        self,
+        epsilon_list: List[float],
+        device: torch.device,
+        attack_fn: Callable,
+        log_path: Path
+    ) -> None:
         # print(f"Running adversarial attack using {attack_fn.__name__} with epsilon={epsilon_list}")
         
         # Create a dataloader to fetch validation data
@@ -56,38 +99,34 @@ class LightningClassifier(pl.LightningModule):
         torch.use_deterministic_algorithms(self.deterministic_attack)
         # Ensure the model is on the correct device
         # device = self.device
-        # self.to(device)
+        model = self.model.to(device)
         
         # Set model in evaluation mode
-        self.eval()
+        model.eval()
 
-        total_correct = 0
-        total_samples = 0
-
-        results = list([])
+        attack_correct: int = 0
+        results: List = list([])
         
         #TODO: be smnart about inputs
         for epsilon in tqdm(epsilon_list):
-            for batch in data_loader:
-                x, y = batch
+            for images, labels in tqdm(data_loader):
                 # Move inputs and labels to the same device as the model
-                # x, y = x.to(device), y.to(device) 
+                images, labels = images.to(device), labels.to(device) 
 
                 # Generate adversarial examples using the passed attack function
-                x_adv = attack_fn(self.model, x, y, epsilon)
+                attack_images = attack_fn(model, images, labels, self.criterion, epsilon, device)
 
                 # Forward pass the adversarial examples to see how the model performs
-                adv_logits = self.model.forward(x_adv)
-                baseline_logits = self.model.forward(x)
+                attack_logits = model(attack_images)
+                baseline_logits = model(images)
                 
                 # Compute accuracy on adversarial examples
-                preds = adv_logits.argmax(dim=1)
+                attack_preds = torch.argmax(attack_logits, dim=1)
                 baseline_preds = baseline_logits.argmax(dim=1)
                 # print(baseline, preds)
-                total_correct += (preds == baseline_preds).sum().item()
-                total_samples += x.size(0)
+                attack_correct += (attack_preds == baseline_preds).sum().item()
 
-            accuracy = total_correct / total_samples
+            accuracy = attack_correct / len(data_loader)
             results.append({"epsilon": epsilon, "accuracy": accuracy})
         
             # Log the adversarial attack accuracy
@@ -98,11 +137,12 @@ class LightningClassifier(pl.LightningModule):
     
     # Save the DataFrame as a CSV file
         df_results.to_csv(f"{log_path}/{attack_fn.__name__}.csv", index=False)
+        print(f"saved to {log_path}/{attack_fn.__name__}.csv")
         
     def maximize_loss_fixed_input(
         self,
         model: nn.Module, 
-        input_image: torch.Tensor,
+        image: torch.Tensor,
         label: torch.Tensor, 
         optimizer: torch.optim,
         criterion: torch.nn,
@@ -115,12 +155,12 @@ class LightningClassifier(pl.LightningModule):
         torch.use_deterministic_algorithms(self.deterministic_attack)
         freeze_permutations(self.model, False)
         
-        input_image, label = input_image.to(device), label.to(device)
+        image, label = image.to(device), label.to(device)
         
         for iteration in range(iterations):
             self.perm_optimiser.zero_grad()
             
-            logits = model(input_image)
+            logits = model(image)
             loss = self.criterion(logits, label)
             
             loss = -loss
@@ -205,3 +245,38 @@ class LightningDataModule(pl.LightningDataModule):
     # def test_dataloader(self):
     #     return self.test
         
+class LightningClassifierGNN(pl.LightningModule):
+    def __init__(
+        self, 
+        model: nn.Module,
+        criterion: Callable = None,
+        optimizer_fn: Callable = None,
+        deterministic_train: bool = True,
+        deterministic_test: bool = True,
+        deterministic_attack: bool = True
+    ):
+        """
+        A modular PyTorch Lightning GNN classifier that can handle arbitrary GNN architectures.
+
+        Args:
+            model (nn.Module): Any GNN model.
+            criterion (Callable): The loss function, defaults to CrossEntropyLoss.
+            optimizer_fn (Callable): Function to create an optimizer, defaults to SGD.
+            deterministic_train (bool): If True, enforce deterministic algorithms during training.
+            deterministic_test (bool): If True, enforce deterministic algorithms during testing.
+            deterministic_attack (bool): If True, enforce deterministic algorithms during adversarial attacks.
+        """
+        super().__init__()
+        self.model = model
+        self.criterion = criterion if criterion else nn.CrossEntropyLoss()
+        self.optimizer_fn = optimizer_fn
+
+        self.deterministic_train = deterministic_train
+        self.deterministic_test = deterministic_test
+        self.deterministic_attack = deterministic_attack
+        
+        # Optional: Optimizer for "permutation" parameters if they exist
+        self.perm_optimiser = torch.optim.SGD(
+            [param for name, param in model.named_parameters() if "permutation" in name],
+            lr=1e-3
+        ) if any("permutation" in name for name, _ in model.named_parameters()) else None
