@@ -126,18 +126,18 @@ class LightningClassifier(pl.LightningModule):
                 # print(baseline, preds)
                 attack_correct += (attack_preds == baseline_preds).sum().item()
 
-            accuracy = attack_correct / len(data_loader)
-            results.append({"epsilon": epsilon, "accuracy": accuracy})
+            attack_accuracy = attack_correct / len(data_loader)
+            results.append({"epsilon": epsilon, "accuracy": attack_accuracy})
         
             # Log the adversarial attack accuracy
             # self.logger.experiment('adversarial_attack_accuracy', accuracy)
             # self.logger.experiment.add_scalar('adversarial_attack_accuracy', accuracy, epsilon)
             # self.log(f'adversarial_attack_accuracy_epsilon_{epsilon}', accuracy, on_step=False, on_epoch=True)
-        df_results = pd.DataFrame(results)
+        results_df = pd.DataFrame(results)
     
     # Save the DataFrame as a CSV file
-        df_results.to_csv(f"{log_path}/{attack_fn.__name__}.csv", index=False)
-        print(f"saved to {log_path}/{attack_fn.__name__}.csv")
+        results_df.to_csv(f"{log_path}/{attack_fn.__name__}.csv", index=False)
+        # print(f"saved to {log_path}/{attack_fn.__name__}.csv")
         
     def maximize_loss_fixed_input(
         self,
@@ -233,7 +233,7 @@ class LightningDataModule(pl.LightningDataModule):
         self.val = val_dataloader
         # self.test = test_dataloader
     
-    def setup(self, stage):
+    def setup(self, stage=None):
         pass
             
     def train_dataloader(self):
