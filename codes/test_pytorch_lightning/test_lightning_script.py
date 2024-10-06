@@ -8,7 +8,7 @@ import os
 from tqdm import tqdm
 import pandas as pd
 from utils.utils import *  # Import your utility functions
-from attacks.attacks import *  # Import your attack functions
+# from attacks.attacks import *  # Import your attack functions
 from models.models import *  # Import your models
 from data_and_transforms.data_and_transforms import *  # Import data
 
@@ -39,6 +39,7 @@ def main(args):
     }
     model_dispatcher = {
         "MNIST": MNISTClassifier,
+        "MNISTLearnablePermutation": MNISTClassifierAtomicLinearLearnablePermutation,
         "AtomicMNIST": AtomicMNISTClassifier,
         "ASTRO": AstroClassifier,
         "AtomicASTRO": AtomicAstroClassifier,
@@ -46,7 +47,7 @@ def main(args):
 
     data_module = dataset_dispatcher[args.dataset](args.batch_size)
     # Initialize model with a chosen epsilon for adversarial attacks
-    model = LightningClassifier(model_dispatcher[args.model]())
+    model = LightningClassifier(model_dispatcher[args.model](), True, True, True)
 
     # Setup logger
     if args.log_dir is None:
@@ -69,10 +70,17 @@ def main(args):
     log_path = os.path.join(
         log_dir, f"{args.experiment_name}/version_{trainer.logger.version}"
     )
-    model.adversarial_attack(
-        fgsm_attack,
-        epsilon_list=[i * 1e-12 for i in range(0, int(1e3), int(1e2))],
+    # model.adversarial_attack(
+    #     fgsm_attack,
+    #     epsilon_list=[i * 1e-12 for i in range(0, int(1e3), int(1e2))],
+    #     log_path=log_path,
+    # )
+
+    model.maximize_loss_fixed_adversarial_input(
+        attack_fn=fgsm_attack,
+        epsilon_list=[1e-3],
         log_path=log_path,
+        device=torch.device("cuda") 
     )
 
 
