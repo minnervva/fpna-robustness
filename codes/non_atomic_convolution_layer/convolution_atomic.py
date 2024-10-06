@@ -35,7 +35,7 @@ class LinearConv2d(nn.Module):
         return x_out
 
 
-def load_weights_from_conv2d(conv2d_layer: nn.Conv2d, linear_conv2d_layer: 'LinearConv2d'):
+def load_weights_from_conv2d(conv2d_layer: nn.Conv2d, linear_conv2d_layer: LinearConv2d):
     """
     Load weights from nn.Conv2d layer into LinearConv2d layer.
     """

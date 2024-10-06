@@ -656,30 +656,31 @@ def maximize_loss_fixed_adversarial_input(
                 
     df.to_csv("./results.csv", index=False)
     
-def fgsm_attack(model, x, y, criterion, epsilon, device):
-    
+def fgsm_attack(model, x, y, criterion, epsilon, device) -> torch.Tensor:
+    """ Performs the Fast Gradient Sign Method (FGSM) attack, and returns the adversarial image
+
+    Args:
+        model (_type_): _description_
+        x (_type_): _description_
+        y (_type_): _description_
+        criterion (_type_): _description_
+        epsilon (_type_): _description_
+        device (_type_): _description_
+
+    Returns:
+        torch.Tensor: _description_
+    """
     x = x.to(device)
     y = y.to(device)
     model.to(device)
     
-    # Make sure x requires gradient
-    x.requires_grad = True
-
-    # Forward pass
+    x.requires_grad = True # Make sure x requires gradient
     logits = model(x)
-    
-    # Compute the loss
     loss = criterion(logits, y)
-    
-    # Zero out previous gradients
-    model.zero_grad()
-    
-    # Compute gradients of the loss w.r.t. the input image
+    model.zero_grad() # Zero out previous gradients
     loss.backward()
-
     # Create adversarial examples using the sign of the gradients
     x_adv = x + epsilon * x.grad.sign()
-
     # Ensure the values are still within [0, 1]
     x_adv = torch.clamp(x_adv, 0, 1)
     
