@@ -344,7 +344,26 @@ def pgd_attack(
         attack_data.x = attack_data.x.detach()
         attack_data.x.requires_grad = True
 
-    return attack_data 
+    return attack_data
+
+def random_attack(
+    model: nn.Module,
+    data: Union[Batch, Data],
+    criterion: torch.nn,
+    epsilon: float,
+    device: torch.device,
+) -> Union[Batch, Data]:
+
+    # Clone the original data
+    attack_data = data.clone()
+
+    # Generate random noise within the [-epsilon, epsilon] range
+    random_noise = (2 * torch.rand_like(attack_data.x) - 1) * epsilon
+
+    # Add the random noise to the original input
+    attack_data.x = torch.clamp(attack_data.x + random_noise, min=0, max=1)
+
+    return attack_data
 
 # class LightningDataModuleGNN(pl.LightningDataModule):
 #     def __init__(self, dataset, batch_size):
@@ -492,7 +511,7 @@ def main(args):
 
     # Run adversarial attacks after training
     model.adversarial_attack(
-        attack_fn=pgd_attack,
+        attack_fn=random_attack,
         epsilon_list=[0.01],
         log_path=log_path,
         device=torch.device("cuda")
