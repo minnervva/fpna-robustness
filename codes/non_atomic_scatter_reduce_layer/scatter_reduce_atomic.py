@@ -1,0 +1,105 @@
+import torch
+import torch.nn.functional as F
+from scipy.optimize import linear_sum_assignment
+import warnings
+import pytest
+
+class LearnablePermutation(torch.nn.Module):
+    def __init__(self, in_features, temperature=1.0):
+        super(LearnablePermutation, self).__init__()
+        self.in_features = in_features
+        self.temperature = temperature
+        self.logits = torch.nn.Parameter(torch.randn(in_features, in_features))
+        self.init_identity()
+
+    def init_identity(self):
+        with torch.no_grad():
+            self.logits.data = torch.eye(self.in_features)
+    
+    def forward(self):
+        if self.training:
+            gumbel_noise = -torch.log(-torch.log(torch.rand_like(self.logits)))
+            perm_matrix = F.softmax((self.logits + gumbel_noise) / self.temperature, dim=-1)
+        else:
+            perm_matrix = torch.zeros_like(self.logits)
+            row_indices, col_indices = linear_sum_assignment(-1 * self.logits.detach().cpu().numpy(), maximize=True)
+            perm_matrix[row_indices, col_indices] = 1.0
+            
+        self._validate_permutation_matrix(perm_matrix)
+        print(perm_matrix) 
+        return perm_matrix
+    
+    def _validate_permutation_matrix(self, perm_matrix):
+        if self.training:
+            row_sums = perm_matrix.sum(dim=-1)
+            if not torch.allclose(row_sums, torch.ones_like(row_sums), atol=1e-5):
+                warnings.warn("Warning: In training mode, some rows of the permutation matrix do not sum to 1")
+        else:
+            if not torch.all((perm_matrix == 0) | (perm_matrix == 1)):
+                warnings.warn("Warning: In eval mode, matrix contains elements that are not 0 or 1")
+            
+            if not (torch.all(perm_matrix.sum(dim=-1) == 1) and torch.all(perm_matrix.sum(dim=-2) == 1)):
+                warnings.warn("Warning: In eval mode, not all rows and columns have exactly one '1'")
+
+def scatter_reduce_with_permutation(src, index, perm_matrix, reduction='sum'):
+    """
+    Custom scatter_reduce operation that permutes src and index based on a learnable permutation matrix.
+    
+    Args:
+        src (torch.Tensor): The source tensor.
+        index (torch.Tensor): The index tensor indicating where to scatter the values.
+        perm_layer (LearnablePermutation): An instance of LearnablePermutation for generating the permutation matrix.
+        reduction (str): The reduction operation ('sum', 'mean', etc.).
+    
+    Returns:
+        torch.Tensor: The result of the scatter reduce operation after applying the permutation.
+    """
+    # Get the permutation matrix
+    # perm_matrix = perm
+    
+    # Ensure src is of the same dtype as perm_matrix
+    src = src.float()  # Convert src to float
+
+    # Permute src
+    permuted_src = torch.matmul(perm_matrix, src.unsqueeze(1)).squeeze(1)
+    permuted_index = torch.matmul(perm_matrix, index.unsqueeze(1).to(torch.float32)).squeeze(1).to(torch.int64)
+
+    # Now proceed with the scatter operation
+    if reduction == 'sum':
+        result = torch.zeros_like(permuted_src)
+        result = result.scatter_add(0, permuted_index, permuted_src)
+    elif reduction == 'mean':
+        result = torch.zeros_like(permuted_src)
+        result = result.scatter_add(0, permuted_index, permuted_src)
+        counts = torch.bincount(index, minlength=result.size(0))
+        result = result / counts.clamp(min=1)
+    
+    return result
+
+@pytest.mark.parametrize("src, index, reduction", [
+    (torch.tensor([1.0, 2.0, 3.0, 4.0]), torch.tensor([0, 1, 0, 1], dtype=torch.long), 'sum'),
+    (torch.tensor([5.0, 6.0, 7.0, 8.0]), torch.tensor([1, 0, 1, 0], dtype=torch.long), 'mean'),
+    (torch.tensor([9.0, 10.0, 11.0, 12.0]), torch.tensor([2, 2, 0, 1], dtype=torch.long), 'sum'),
+    (torch.tensor([13.0, 14.0, 15.0, 16.0]), torch.tensor([3, 3, 0, 1], dtype=torch.long), 'mean'),
+])
+def test_scatter_reduce_with_permutation(src, index, reduction):
+    # Standard scatter_reduce output
+    expected_result = torch.zeros_like(src)
+    if reduction == 'sum':
+        expected_result = expected_result.scatter_add(0, index, src)
+    elif reduction == 'mean':
+        expected_result = expected_result.scatter_add(0, index, src)
+        counts = torch.bincount(index, minlength=expected_result.size(0))
+        expected_result = expected_result / counts.clamp(min=1)
+
+    # Initialize the LearnablePermutation instance
+    in_features = src.size(0)
+    perm_matrix = LearnablePermutation(in_features).eval()()
+    print(perm_matrix)
+
+    # Custom scatter_reduce with permutation
+    result = scatter_reduce_with_permutation(src, index, perm_matrix, reduction)
+
+    # Assert equality
+    print(result, expected_result)
+    assert torch.equal(result, expected_result), f"Test failed for src={src}, index={index}, reduction={reduction}"
