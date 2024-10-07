@@ -305,6 +305,46 @@ def fgsm_attack(
     attack_data.x = attack_data.x + epsilon * attack_data.x.grad.sign()
     return attack_data
 
+def pgd_attack(
+    model: nn.Module,
+    data: Union[Batch, Data],
+    criterion: torch.nn,
+    epsilon: float,
+    device: torch.device,
+    alpha: float = 1.0,
+    num_steps: int = 10,
+) -> Union[Batch, Data]:
+    
+    # Clone the original data and enable gradient tracking
+    attack_data = data.clone()
+    attack_data.x.requires_grad = True
+
+    # Save the original data features to project perturbations later
+    original_x = attack_data.x.clone().detach()
+
+    for _ in range(num_steps):
+        # Forward pass: Compute logits and loss
+        logits = model(attack_data.x.to(device), attack_data.edge_index.to(device))
+        loss = criterion(logits[data.train_mask], data.y[data.train_mask])
+        
+        # Zero out previous gradients
+        model.zero_grad()
+        
+        # Backward pass: Compute gradients with respect to input features
+        loss.backward()
+
+        # Apply gradient ascent (move in the direction of the gradient)
+        attack_data.x = attack_data.x + alpha * attack_data.x.grad.sign()
+
+        # Ensure the perturbation stays within the epsilon ball around the original input
+        perturbation = torch.clamp(attack_data.x - original_x, min=-epsilon, max=epsilon)
+        attack_data.x = torch.clamp(original_x + perturbation, min=0, max=1)
+
+        # Detach the gradients after each step to prevent accumulation
+        attack_data.x = attack_data.x.detach()
+        attack_data.x.requires_grad = True
+
+    return attack_data 
 
 # class LightningDataModuleGNN(pl.LightningDataModule):
 #     def __init__(self, dataset, batch_size):
@@ -452,7 +492,7 @@ def main(args):
 
     # Run adversarial attacks after training
     model.adversarial_attack(
-        attack_fn=fgsm_attack,
+        attack_fn=pgd_attack,
         epsilon_list=[0.01],
         log_path=log_path,
         device=torch.device("cuda")
