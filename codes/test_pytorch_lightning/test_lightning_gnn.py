@@ -365,6 +365,59 @@ def random_attack(
 
     return attack_data
 
+def targeted_class_confidence_attack(
+    model: nn.Module,
+    data: Union[Batch, Data],
+    criterion: torch.nn,
+    epsilon: float,
+    device: torch.device,
+    alpha: float = 1.0,
+    num_steps: int = 10,
+) -> Union[Batch, Data]:
+
+    # Clone the original data and enable gradient tracking
+    attack_data = data.clone()
+    attack_data.x.requires_grad = True
+
+    # Save the original data features for projection
+    original_x = attack_data.x.clone().detach()
+
+    for _ in range(num_steps):
+        # Forward pass: Compute logits
+        logits = model(attack_data.x.to(device), attack_data.edge_index.to(device))
+
+        # For each data point in the batch, find the most confident (max logit) and second most confident class
+        top_logits = torch.topk(logits[data.train_mask], 2, dim=1)
+
+        # Get indices of most and second most confident classes
+        most_confident_class = top_logits.indices[:, 0]
+        second_confident_class = top_logits.indices[:, 1]
+
+        # Compute the difference between the logits of the most confident and second most confident classes
+        targeted_loss = logits[data.train_mask, most_confident_class] - logits[data.train_mask, second_confident_class]
+
+        # Minimize this difference to reduce the confidence of the most likely class and increase the second most likely
+        loss = torch.mean(targeted_loss)
+        
+        # Zero out previous gradients
+        model.zero_grad()
+
+        # Backward pass: Compute gradients
+        loss.backward()
+
+        # Apply gradient ascent to maximize the second class's confidence and minimize the first class's confidence
+        attack_data.x = attack_data.x - alpha * attack_data.x.grad.sign()
+
+        # Project perturbation to keep it within the epsilon ball around the original input
+        perturbation = torch.clamp(attack_data.x - original_x, min=-epsilon, max=epsilon)
+        attack_data.x = torch.clamp(original_x + perturbation, min=0, max=1)
+
+        # Detach gradients after each step to avoid accumulation
+        attack_data.x = attack_data.x.detach()
+        attack_data.x.requires_grad = True
+
+    return attack_data
+
 # class LightningDataModuleGNN(pl.LightningDataModule):
 #     def __init__(self, dataset, batch_size):
 #         super(LightningDataModuleGNN, self).__init__()
@@ -511,7 +564,7 @@ def main(args):
 
     # Run adversarial attacks after training
     model.adversarial_attack(
-        attack_fn=random_attack,
+        attack_fn=targeted_class_confidence_attack,
         epsilon_list=[0.01],
         log_path=log_path,
         device=torch.device("cuda")
