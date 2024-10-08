@@ -104,7 +104,7 @@ def main(args):
         log_dir = Path(f"{torch.cuda.get_device_name()}/CSV_Logs")
         
     log_path = log_dir / f"{args.experiment_name}" / f"version_{trainer.logger.version}"
-    print(log_path)
+    # print(log_path)
     
     
     model.adversarial_attack(

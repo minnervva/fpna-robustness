@@ -165,3 +165,8 @@ cython_debug/
 
 # Sanjif Data
 /codes/data/
+/codes/test_pytorch_lightning/data
+*.gz
+*.yaml
+*.ckpt
+*-ubyte

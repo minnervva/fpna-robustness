@@ -418,21 +418,6 @@ def targeted_class_confidence_attack(
 
     return attack_data
 
-# class LightningDataModuleGNN(pl.LightningDataModule):
-#     def __init__(self, dataset, batch_size):
-#         super(LightningDataModuleGNN, self).__init__()
-#         self.dataset = dataset
-#         self.batch_size = batch_size
-
-#     def setup(self, stage=None):
-#         transform = T.NormalizeFeatures()
-#         self.dataset = Planetoid(root='data/Planetoid', name='Cora', transform=transform)
-
-#     def train_dataloader(self):
-#         return GeoDataLoader(self.dataset, batch_size=self.batch_size, shuffle=True)
-
-#     def val_dataloader(self):
-#         return GeoDataLoader(self.dataset, batch_size=self.batch_size, shuffle=False)
 
 class LightningDataModuleGNN(pl.LightningDataModule):
     def __init__(self, dataset, batch_size):
