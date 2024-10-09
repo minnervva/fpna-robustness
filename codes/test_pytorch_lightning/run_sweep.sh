@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Define arrays for models and datasets
-models=("GraphSAGE" "GCN" "GAT")
-datasets=("CORA" "CiteSeer" "PubMed")
+models=("GraphSAGE" "GAT")
+datasets=("CORA" "CiteSeer")
 
 # Loop through each model and dataset combination
 for model in "${models[@]}"
@@ -17,7 +17,7 @@ do
     python test_lightning_gnn.py --dataset "$dataset" --model "$model" --batch_size 32 --experiment_name "$experiment_name" --devices 1 --max_epochs 25 --deterministic_attack --deterministic_train
 
     # Run the second command 100 times for each model-dataset combination
-    for i in {1..100}
+    for i in {1..5}
     do
       echo "Running iteration $i for $experiment_name..."
       python test_lightning_gnn.py --dataset "$dataset" --model "$model" --batch_size 32 --experiment_name "$experiment_name" --devices 1 --max_epochs 25 --deterministic_attack

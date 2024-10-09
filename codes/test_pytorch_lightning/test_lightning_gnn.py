@@ -1194,58 +1194,58 @@ def main(args):
 
     # # Run adversarial attacks after training
     
-    if args.num_inference_runs:
-        for iter in range(args.num_inference_runs):
-            # model.adversarial_attack(
-            #     attack_fn=fgsm_attack,
-            #     epsilon_list=[0, 0.00001, 0.0001, 0.001, 0.01, 0.1],
-            #     log_path=log_path,
-            #     device=torch.device("cuda"),
-            #     iter=iter
-            # )
-            # model.adversarial_attack(
-            #     attack_fn=pgd_attack,
-            #     epsilon_list=[0, 0.00001, 0.0001, 0.001, 0.01, 0.1],
-            #     log_path=log_path,
-            #     device=torch.device("cuda"),
-            #     iter=iter
-            # )
-            # model.adversarial_attack(
-            #     attack_fn=random_attack,
-            #     epsilon_list=[0, 0.00001, 0.0001, 0.001, 0.01, 0.1],
-            #     log_path=log_path,
-            #     device=torch.device("cuda"),
-            #     iter=iter
-            # )
-            model.adversarial_attack(
-                attack_fn=targeted_class_confidence_attack,
-                epsilon_list=[0, 0.00001, 0.0001, 0.001, 0.01, 0.1],
-                log_path=log_path,
-                device=torch.device("cuda"),
-                iter=iter
-            )
+    # if args.num_inference_runs:
+    #     for iter in range(args.num_inference_runs):
+    #         model.adversarial_attack(
+    #             attack_fn=fgsm_attack,
+    #             epsilon_list=[0, 0.00001, 0.0001, 0.001, 0.01, 0.1],
+    #             log_path=log_path,
+    #             device=torch.device("cuda"),
+    #             iter=iter
+    #         )
+    #         model.adversarial_attack(
+    #             attack_fn=pgd_attack,
+    #             epsilon_list=[0, 0.00001, 0.0001, 0.001, 0.01, 0.1],
+    #             log_path=log_path,
+    #             device=torch.device("cuda"),
+    #             iter=iter
+    #         )
+    #         model.adversarial_attack(
+    #             attack_fn=random_attack,
+    #             epsilon_list=[0, 0.00001, 0.0001, 0.001, 0.01, 0.1],
+    #             log_path=log_path,
+    #             device=torch.device("cuda"),
+    #             iter=iter
+    #         )
+    #         model.adversarial_attack(
+    #             attack_fn=targeted_class_confidence_attack,
+    #             epsilon_list=[0, 0.00001, 0.0001, 0.001, 0.01, 0.1],
+    #             log_path=log_path,
+    #             device=torch.device("cuda"),
+    #             iter=iter
+    #         )
     
     if is_learable_permutation:
-        # model.maximize_loss_fixed_adversarial_input(
-        #     attack_fn=fgsm_attack,
-        #     epsilon_list=[0, 0.00001, 0.0001, 0.001, 0.01, 0.1],
-        #     log_path=log_path,
-        #     device=torch.device("cuda")
-        # )
-        # model.maximize_loss_fixed_adversarial_input(
-        #     attack_fn=pgd_attack,
-        #     epsilon_list=[0, 0.00001, 0.0001, 0.001, 0.01, 0.1],
-        #     log_path=log_path,
-        #     device=torch.device("cuda")
-        # )
-        # model.maximize_loss_fixed_adversarial_input(
-        #     attack_fn=random_attack,
-        #     epsilon_list=[0, 0.00001, 0.0001, 0.001, 0.01, 0.1],
-        #     log_path=log_path,
-        #     device=torch.device("cuda")
-        # )
         model.maximize_loss_fixed_adversarial_input(
             attack_fn=targeted_class_confidence_attack,
+            epsilon_list=[0, 0.00001, 0.0001, 0.001, 0.01, 0.1],
+            log_path=log_path,
+            device=torch.device("cuda")
+        )
+        model.maximize_loss_fixed_adversarial_input(
+            attack_fn=fgsm_attack,
+            epsilon_list=[0, 0.00001, 0.0001, 0.001, 0.01, 0.1],
+            log_path=log_path,
+            device=torch.device("cuda")
+        )
+        model.maximize_loss_fixed_adversarial_input(
+            attack_fn=pgd_attack,
+            epsilon_list=[0, 0.00001, 0.0001, 0.001, 0.01, 0.1],
+            log_path=log_path,
+            device=torch.device("cuda")
+        )
+        model.maximize_loss_fixed_adversarial_input(
+            attack_fn=random_attack,
             epsilon_list=[0, 0.00001, 0.0001, 0.001, 0.01, 0.1],
             log_path=log_path,
             device=torch.device("cuda")
