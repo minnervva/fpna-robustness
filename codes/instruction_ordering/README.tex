@@ -1,0 +1,39 @@
+\documentclass[prb,twocolumn]{revtex4}
+
+\usepackage{caption}
+\usepackage{graphicx}
+\usepackage{graphics}
+\usepackage{xcolor}
+\usepackage{glossaries}
+\usepackage{listings}
+\usepackage[caption=false]{subfig}
+
+
+\begin{document}
+%\input{glossary.tex}
+\newcommand{\indexadd}{\texttt{index\_add} }
+\newcommand{\scatterreduce}{\texttt{scatter\_reduce} }
+\newcommand{\atomicadd}{\texttt{atomicAdd} }
+\newcommand{\threadfence}{\texttt{\_\_threadfence} }
+\newcommand{\syncthreads}{\texttt{\_\_syncthreads} }
+\newcommand{\fpna}{\gls{FPNA}}
+\newcommand{\fp4}{\gls{FP4}}
+\newcommand{\fp8}{\gls{FP8}}
+\newcommand{\fp16}{\gls{FP16}}
+\newcommand{\fp32}{\gls{FP32}}
+\newcommand{\fp64}{\gls{FP64}}
+\title{IPDPS paper : Can we influence the execution of atomic instructions with external means}
+
+\author{Sanjif Shanmugavelu$^{1*}$}
+\author{Christopher Culver$^{1*}$}
+\author{Mathieu Taillefumier$^{2*}$}
+\author{Oscar Hernandez$^3$}
+\author{Ada Sedova$^{3*}$}
+\affiliation{Maxeler Technologies, a Groq Company. 3 Hammersmith Grove, W6 0ND, London, UK}
+\affiliation{ETH Zurich/Swiss National Supercomputing Centre (CSCS). Via Trevano 131, 6900 Lugano, Switzerland}
+\affiliation{Oak Ridge National Laboratory. Oak Ridge, TN, USA}
+\email{sshanmugavelu@groq.com}
+\email{cculver@groq.com}
+\email{tmathieu@ethz.ch}
+\email{sedovaaa@ornl.gov}
+\end{document}

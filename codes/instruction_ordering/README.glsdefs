@@ -1,0 +1,728 @@
+\glsdefs@newdocentry{HPC}%
+{%
+name={\acronymfont {\glsentryshort {HPC}}},%
+sort={HPC},%
+type={main},%
+first={HPC},%
+firstplural={HPCs},%
+text={HPC},%
+plural={HPCs},%
+description={high-performance computing},%
+descriptionplural={high-performance computing},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={high-performance computing},%
+longplural={high-performance computings},%
+short={HPC},%
+shortplural={HPCs},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{DL}%
+{%
+name={\acronymfont {\glsentryshort {DL}}},%
+sort={DL},%
+type={main},%
+first={DL},%
+firstplural={DLs},%
+text={DL},%
+plural={DLs},%
+description={deep learning},%
+descriptionplural={deep learning},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={deep learning},%
+longplural={deep learnings},%
+short={DL},%
+shortplural={DLs},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{AI}%
+{%
+name={\acronymfont {\glsentryshort {AI}}},%
+sort={AI},%
+type={main},%
+first={AI},%
+firstplural={AIs},%
+text={AI},%
+plural={AIs},%
+description={artificial intelligence},%
+descriptionplural={artificial intelligence},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={artificial intelligence},%
+longplural={artificial intelligences},%
+short={AI},%
+shortplural={AIs},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{CSCS}%
+{%
+name={\acronymfont {\glsentryshort {CSCS}}},%
+sort={CSCS},%
+type={main},%
+first={CSCS},%
+firstplural={CSCSs},%
+text={CSCS},%
+plural={CSCSs},%
+description={Swiss national supercomputing center},%
+descriptionplural={Swiss national supercomputing center},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={Swiss national supercomputing center},%
+longplural={Swiss national supercomputing centers},%
+short={CSCS},%
+shortplural={CSCSs},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{DOE}%
+{%
+name={\acronymfont {\glsentryshort {DOE}}},%
+sort={DOE},%
+type={main},%
+first={DOE},%
+firstplural={DOEs},%
+text={DOE},%
+plural={DOEs},%
+description={US Department of Energy},%
+descriptionplural={US Department of Energy},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={US Department of Energy},%
+longplural={US Department of Energys},%
+short={DOE},%
+shortplural={DOEs},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{DNN}%
+{%
+name={\acronymfont {\glsentryshort {DNN}}},%
+sort={DNN},%
+type={main},%
+first={DNN},%
+firstplural={DNNs},%
+text={DNN},%
+plural={DNNs},%
+description={deep neural network},%
+descriptionplural={deep neural network},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={deep neural network},%
+longplural={deep neural networks},%
+short={DNN},%
+shortplural={DNNs},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{DNNs}%
+{%
+name={\acronymfont {\glsentryshort {DNNs}}},%
+sort={DNNs},%
+type={main},%
+first={DNNs},%
+firstplural={DNNss},%
+text={DNNs},%
+plural={DNNss},%
+description={deep neural networks},%
+descriptionplural={deep neural networks},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={deep neural networks},%
+longplural={deep neural networkss},%
+short={DNNs},%
+shortplural={DNNss},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{DFT}%
+{%
+name={\acronymfont {\glsentryshort {DFT}}},%
+sort={DFT},%
+type={main},%
+first={DFT},%
+firstplural={DFTs},%
+text={DFT},%
+plural={DFTs},%
+description={density functional theory},%
+descriptionplural={density functional theory},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={density functional theory},%
+longplural={density functional theorys},%
+short={DFT},%
+shortplural={DFTs},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{FPNA}%
+{%
+name={\acronymfont {\glsentryshort {FPNA}}},%
+sort={FPNA},%
+type={main},%
+first={FPNA},%
+firstplural={FPNAs},%
+text={FPNA},%
+plural={FPNAs},%
+description={floating-point non-associativity},%
+descriptionplural={floating-point non-associativity},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={floating-point non-associativity},%
+longplural={floating-point non-associativitys},%
+short={FPNA},%
+shortplural={FPNAs},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{GPU}%
+{%
+name={\acronymfont {\glsentryshort {GPU}}},%
+sort={GPU},%
+type={main},%
+first={GPU},%
+firstplural={GPUs},%
+text={GPU},%
+plural={GPUs},%
+description={graphics processing unit},%
+descriptionplural={graphics processing unit},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={graphics processing unit},%
+longplural={graphics processing units},%
+short={GPU},%
+shortplural={GPUs},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{FP}%
+{%
+name={\acronymfont {\glsentryshort {FP}}},%
+sort={FP},%
+type={main},%
+first={FP},%
+firstplural={FPs},%
+text={FP},%
+plural={FPs},%
+description={floating-point numbers},%
+descriptionplural={floating-point numbers},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={floating-point numbers},%
+longplural={floating-point numberss},%
+short={FP},%
+shortplural={FPs},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{FP64}%
+{%
+name={\acronymfont {\glsentryshort {FP64}}},%
+sort={FP64},%
+type={main},%
+first={FP64},%
+firstplural={FP64s},%
+text={FP64},%
+plural={FP64s},%
+description={double precision floating point numbers},%
+descriptionplural={double precision floating point numbers},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={double precision floating point numbers},%
+longplural={double precision floating point numberss},%
+short={FP64},%
+shortplural={FP64s},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{FP32}%
+{%
+name={\acronymfont {\glsentryshort {FP32}}},%
+sort={FP32},%
+type={main},%
+first={FP32},%
+firstplural={FP32s},%
+text={FP32},%
+plural={FP32s},%
+description={single precision floating point numbers},%
+descriptionplural={single precision floating point numbers},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={single precision floating point numbers},%
+longplural={single precision floating point numberss},%
+short={FP32},%
+shortplural={FP32s},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{FP16}%
+{%
+name={\acronymfont {\glsentryshort {FP16}}},%
+sort={FP16},%
+type={main},%
+first={FP16},%
+firstplural={FP16s},%
+text={FP16},%
+plural={FP16s},%
+description={half precision floating point numbers},%
+descriptionplural={half precision floating point numbers},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={half precision floating point numbers},%
+longplural={half precision floating point numberss},%
+short={FP16},%
+shortplural={FP16s},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{FP8}%
+{%
+name={\acronymfont {\glsentryshort {FP8}}},%
+sort={FP8},%
+type={main},%
+first={FP8},%
+firstplural={FP8s},%
+text={FP8},%
+plural={FP8s},%
+description={half half precision floating point numbers},%
+descriptionplural={half half precision floating point numbers},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={half half precision floating point numbers},%
+longplural={half half precision floating point numberss},%
+short={FP8},%
+shortplural={FP8s},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{FP4}%
+{%
+name={\acronymfont {\glsentryshort {FP4}}},%
+sort={FP4},%
+type={main},%
+first={FP4},%
+firstplural={FP4s},%
+text={FP4},%
+plural={FP4s},%
+description={half half half precision floating point numbers},%
+descriptionplural={half half half precision floating point numbers},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={half half half precision floating point numbers},%
+longplural={half half half precision floating point numberss},%
+short={FP4},%
+shortplural={FP4s},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{PDF}%
+{%
+name={\acronymfont {\glsentryshort {PDF}}},%
+sort={PDF},%
+type={main},%
+first={PDF},%
+firstplural={PDFs},%
+text={PDF},%
+plural={PDFs},%
+description={probability density function},%
+descriptionplural={probability density function},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={probability density function},%
+longplural={probability density functions},%
+short={PDF},%
+shortplural={PDFs},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{SPSA}%
+{%
+name={\acronymfont {\glsentryshort {SPSA}}},%
+sort={SPA},%
+type={main},%
+first={SPA},%
+firstplural={SPAs},%
+text={SPA},%
+plural={SPAs},%
+description={simple-pass-with \texttt {atomicAdd}},%
+descriptionplural={simple-pass-with \texttt {atomicAdd}},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={simple-pass-with \protect \texttt  {atomicAdd}},%
+longplural={simple-pass-with \protect \texttt  {atomicAdd}s},%
+short={SPA},%
+shortplural={SPAs},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{AO}%
+{%
+name={\acronymfont {\glsentryshort {AO}}},%
+sort={AO},%
+type={main},%
+first={AO},%
+firstplural={AOs},%
+text={AO},%
+plural={AOs},%
+description={\texttt {atomicAdd}-only},%
+descriptionplural={\texttt {atomicAdd}-only},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={\protect \texttt  {atomicAdd}-only},%
+longplural={\protect \texttt  {atomicAdd}-onlys},%
+short={AO},%
+shortplural={AOs},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{CU}%
+{%
+name={\acronymfont {\glsentryshort {CU}}},%
+sort={CU},%
+type={main},%
+first={CU},%
+firstplural={CUs},%
+text={CU},%
+plural={CUs},%
+description={sum function from the CUB/HIPCUB library},%
+descriptionplural={sum function from the CUB/HIPCUB library},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={sum function from the CUB/HIPCUB library},%
+longplural={sum function from the CUB/HIPCUB librarys},%
+short={CU},%
+shortplural={CUs},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{SPTR}%
+{%
+name={\acronymfont {\glsentryshort {SPTR}}},%
+sort={SPTR},%
+type={main},%
+first={SPTR},%
+firstplural={SPTRs},%
+text={SPTR},%
+plural={SPTRs},%
+description={single-pass-with-tree-reduction},%
+descriptionplural={single-pass-with-tree-reduction},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={single-pass-with-tree-reduction},%
+longplural={single-pass-with-tree-reductions},%
+short={SPTR},%
+shortplural={SPTRs},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{FIFO}%
+{%
+name={\acronymfont {\glsentryshort {FIFO}}},%
+sort={FIFO},%
+type={main},%
+first={FIFO},%
+firstplural={FIFOs},%
+text={FIFO},%
+plural={FIFOs},%
+description={first in first out queue},%
+descriptionplural={first in first out queue},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={first in first out queue},%
+longplural={first in first out queues},%
+short={FIFO},%
+shortplural={FIFOs},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{TPRC}%
+{%
+name={\acronymfont {\glsentryshort {TPRC}}},%
+sort={TPRC},%
+type={main},%
+first={TPRC},%
+firstplural={TPRCs},%
+text={TPRC},%
+plural={TPRCs},%
+description={two-passes-with-final-reduction-on-CPU},%
+descriptionplural={two-passes-with-final-reduction-on-CPU},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={two-passes-with-final-reduction-on-CPU},%
+longplural={two-passes-with-final-reduction-on-CPUs},%
+short={TPRC},%
+shortplural={TPRCs},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{SPRG}%
+{%
+name={\acronymfont {\glsentryshort {SPRG}}},%
+sort={SPRG},%
+type={main},%
+first={SPRG},%
+firstplural={SPRGs},%
+text={SPRG},%
+plural={SPRGs},%
+description={single-pass-with-final-recursive-sum-on-GPU},%
+descriptionplural={single-pass-with-final-recursive-sum-on-GPU},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={single-pass-with-final-recursive-sum-on-GPU},%
+longplural={single-pass-with-final-recursive-sum-on-GPUs},%
+short={SPRG},%
+shortplural={SPRGs},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{KL}%
+{%
+name={\acronymfont {\glsentryshort {KL}}},%
+sort={KL},%
+type={main},%
+first={KL},%
+firstplural={KLs},%
+text={KL},%
+plural={KLs},%
+description={Kullback–Leibler divergence criterion},%
+descriptionplural={Kullback–Leibler divergence criterion},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={Kullback–Leibler divergence criterion},%
+longplural={Kullback–Leibler divergence criterions},%
+short={KL},%
+shortplural={KLs},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{GNN}%
+{%
+name={\acronymfont {\glsentryshort {GNN}}},%
+sort={GNN},%
+type={main},%
+first={GNN},%
+firstplural={GNNs},%
+text={GNN},%
+plural={GNNs},%
+description={graph neural network},%
+descriptionplural={graph neural network},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={graph neural network},%
+longplural={graph neural networks},%
+short={GNN},%
+shortplural={GNNs},%
+counter={page},%
+parent={},%
+%
+}%
+
