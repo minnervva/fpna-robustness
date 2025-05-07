@@ -79,6 +79,13 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(fmt)
 
+FetchContent_Declare(
+  rapidcsv
+  GIT_REPOSITORY "https://github.com/d99kris/rapidcsv"
+  GIT_TAG        "v8.85"
+  FIND_PACKAGE_ARGS NAMES rapidcsv
+)
+FetchContent_MakeAvailable(rapidcsv)
 ###########################################################
 # FetchContent_Declare(                                   #
 #   whip                                                  #
@@ -90,12 +97,13 @@ FetchContent_MakeAvailable(fmt)
 ###########################################################
 
 add_executable(test_reduce reduce.cu reduce_test.cpp utils.cu timing/rt_graph.cpp)
+add_executable(KendallTau utils.cu KendallTau.cu timing/rt_graph.cpp)
 
 if (REDUCE_USE_HIP)
 	set_source_files_properties(reduce.cu utils.cu PROPERTIES LANGUAGE HIP)
 endif()
 
-foreach(_app test_reduce)
+foreach(_app test_reduce KendallTau)
   set_target_properties(${_app} PROPERTIES IMPORTED_LINK_INTERFACE_LANGUAGES "CXX"
     LINKER_LANGUAGE "CXX")
   target_compile_features(${_app} PUBLIC cxx_std_17)
@@ -110,5 +118,6 @@ foreach(_app test_reduce)
     $<$<BOOL:${REDUCE_USE_HIP}>:roc::hipblas hip::hiprand hip::host>
     cxxopts::cxxopts
     indicators::indicators
-    fmt::fmt)
+    fmt::fmt
+    rapidcsv)
 endforeach()
