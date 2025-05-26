@@ -1,23 +1,124 @@
 # Appendices
 
-This readme provides all necessary details that could not find their place in the main text due to space restriction. It is divided in two sections. The first section explains how we instrumentalize the code to retrieve the execution order of the atomic operations and how to compile and run it. It also contains additional results for the Mi250x that were only mentioned but not shown in the main text. 
+This readme provides all necessary details that could not find their place in
+the main text due to space restriction. It is divided in two sections. The first
+section explains how we instrumentalize the code to retrieve the execution order
+of the atomic operations and how to compile and run it. It also contains
+additional results for the Mi250x that were only mentioned but not shown in the
+main text.
 
 ## Measuring the Execution Order of Atomic Operations
 
-In the cuda or HIP programming models, instructions are executed sequentially in blocks of 32 threads but their scheduling is unknown. It can lead to issues when floating point atomic operations are used as many of these operations - such as the four elementary artihmetic operations - are non-associative; a problem also known as floating point non-assocciativity. Numerical flutuations become more important and can strongly influence the results in highly non-linear models such as neural networks. The questions we want to answer are the following. First can we instrument the code such that we gain insights about the atomic instructions ordering. Second can we influence instruction scheduling via external means such as power capping, resource sharing or parallel workloads. Third the influence of the elements type on the ordering is unexplored here and merits further studies.
+In the cuda or HIP programming models, instructions are executed sequentially in
+blocks of 32 threads but their scheduling is unknown. It can lead to issues when
+floating point atomic operations are used as many of these operations - such as
+the four elementary artihmetic operations - are non-associative; a problem also
+known as floating point non-assocciativity. Numerical flutuations become more
+important and can strongly influence the results in highly non-linear models
+such as neural networks. The questions we want to answer are the following.
+First can we instrument the code such that we gain insights about the atomic
+instructions ordering. Second can we influence instruction scheduling via
+external means such as power capping, resource sharing or parallel workloads.
+Third the influence of the elements type on the ordering is unexplored here and
+merits further studies.
 
 ### Instrumentation
 
-To reply to these two questions, we use the reduction algorithm, one of most used algorithm in computer and numerical science. This algorithm is usually implemented on GPU in two stages, the first stage is a tree reduction ran by each thread block on a block of data, storing the partial result in a temporary array. The second stage is yet again a reduction that is applied to the temporary array after a global synchronization barrier is applied. This method will provide deterministic results if implemented correctly. However, to avoid the global synchronization barrier, many impleemtations use atomic operations to update a global accumulator. The accumulator update is random and the final sum fluctuates from run-to-run  when the atmoic operation is non-associative.
+To reply to these two questions, we use the reduction algorithm, one of most
+used algorithm in computer and numerical science. This algorithm can be
+implemented on GPU in two stages, the first stage is a tree reduction ran by
+each thread block on a block of data, before storing the partial result in a
+temporary array. The second stage is yet again a reduction that is applied to
+the temporary array on either CPU or GPU after a global synchronization barrier
+is applied. When implemented correctly, this method provides deterministic
+results. However, The global synchronization barrier can be avoided
+all-to-gether if we use atomic instructions. We can either use an atomic
+instruction to update the accumulator; this method does not need extra storage,
+or update a counter such that the last block updating the counter is responsible
+for calculating the final answer at the cost of extra storage. Both methods are
+used in practice but the first method can lead to fluctuating results when
+floating point atomic instructions are used while the second method always
+provides deterministic results regardless of the instruction scheduling or data
+type.
 
-Measuring the order of the atomic instruction is equivalent to measuring the update order of the accumulator. In the CUDA programming, atomic instructions such as `atomicAdd(&acc, partial_sum)` return the value of the accumulator `acc` before the update after updating the variable `acc`. More specifically,
+The CUDA programming model does not provide any direct mechanism to follow the
+instruction scheduling of atomic operations. However, we can retrieve this
+information if we can register the value of the accumulator or the counter as
+function of the block index before upating one of the two variables with an
+atomic instruction. Doing this 
+
+```[c++] 
+   track[blockIdx.x] = acc; 
+   atomicAdd(&acc, partial_sum);
+``` 
+
+does not work, because the CUDA programming model does not garranty that the
+value of the `acc` variable is valid as it can also be updated by another thread
+block at the same time. We can use the return value instead as artihmetic atomic
+instructions always return the value of the updated variable before updating it.
+More specifically,
+
 ```[c++]
    track[blockIdx.x] = atomicAdd(&acc, partial_sum); 
 ```
-where the `track` array indexes the temporary values of the accumulator `acc` with respect to the block index. it is *not* possible to write 'track[blockIdx.x] = acc' before calling the atomic as the accumulator value may be updated at the same time, making the read access inconsistent. We consider only positive floating numbers with $x_i \ neq x_j$. This condition makes sure that the accumulator always increases independently of the execution order of the `atomicAdd` instruction. Then sorting the `track` array in ascending or descending order gives us the information we need for the study. In practice this method can be generalized to other types provided that we can order them. Choosing floating points in that case was directly linked to the non-associativity which is one of the main topic of the article. 
 
+where the `track` array is used to store the value of the accumulator vs the
+block index. The full code is given by
+```[c++]
+template <class T, unsigned int blockSize> 
+__global__ void reduce_gpu_follow_atomic(const T *g_idata, T *g_odata, unsigned int n) {
+    // Handle to thread block group
+  T *sdata = SharedMemory<T>();
+
+  // perform first level of reduction,
+  // reading from global memory, writing to shared memory
+  unsigned int tid = threadIdx.x;
+  unsigned int i = blockIdx.x * blockSize * 2 + threadIdx.x;
+  unsigned int gridSize = blockSize * 2 * gridDim.x;
+  // use the end of scratch memory to store how many block are already done.
+
+  T mySum = 0;
+
+  // we reduce multiple elements per thread.  The number is determined by the
+  // number of active thread blocks (via gridDim).  More blocks will result
+  // in a larger gridSize and therefore fewer elements per thread
+  while (i < n) {
+    mySum += g_idata[i];
+
+    // ensure we don't read out of bounds -- this is optimized away for powerOf2
+    // sized arrays
+    if (i + blockSize < n)
+      mySum += g_idata[i + blockSize];
+
+    i += gridSize;
+  }
+
+  blockReduce<T, blockSize, warp_reduction_method::shared_memory>(sdata, mySum, tid);
+
+  if (tid == 0) {
+    T temp = atomicAdd(&g_odata[0], mySum);
+    g_odata[blockIdx.x + 1] = temp;
+  }
+}
+```
+
+The code located in the directory `codes/instruction_ordering` provides both
+implementations but we use the implementation above in the main text. Choosing
+$x_i \ neq x_j, x_i > 0$, imply $\sum_{j < i} x_j < \sum_{j < i + 1} x_j$. We
+retrieve the instruction scheduling after sorting the variable `g_odata`. 
+
+It is also possible to use the counter value to retrieve the isntruction scheduling.
+The GPU kernel can also be found in the code.
+ 
 ### Compiling and Running The Code
-The code measuring the instruction ordering can be found in the directory `codes/instruction_ordering`. It supports both `cuda` and `hip` and its only dependencies are a `c++` compiler (gcc > 11), CUDA/HIP and recent version of `cmake`. All the other dependencies will be installed automatically if necessary. To compile the code, go to `codes/instruction_ordering` and run the following commands
+
+The code measuring the instruction ordering can be found in the directory
+`codes/instruction_ordering`. It supports both `cuda` and `hip` and its only
+dependencies are a `c++` compiler (gcc > 11), CUDA/HIP and recent version of
+`cmake`. All the other dependencies will be installed automatically if
+necessary. To compile the code, go to `codes/instruction_ordering` and run the
+following commands
+
 ```[bash]
 cd codes/instruction_ordering
 mkdir build
@@ -31,32 +132,68 @@ mkdir build
 cd build
 cmake -DREDUCE_USE_HIP=ON -DCMAKE_HIP_ARCHITECTURES=gfx90a
 ```
-for AMD GPU (Mi250x in that specific example). The specific architecture can be controlled by the variables `CMAKE_CUDA_ARCHITECTURES` or `CMAKE_HIP_ARCHITECTURES` depending on the the targeted platform. Typing `make` in the command line will compile two programs, `test_reduce` which measures the instruction ordering under various conditions and `KendallTau` which calculates the Kendall tau correlation function between two matrices stored in `csv` files. Use the argument `--help` to get all program arguments.
+
+for AMD GPU (Mi250x in that specific example). The GPU architecture can be
+controlled by the variables `CMAKE_CUDA_ARCHITECTURES` or
+`CMAKE_HIP_ARCHITECTURES` depending on the targeted platform. Typing `make` in
+the command line will compile two programs, `test_reduce` which measures the
+instruction ordering under various conditions and `KendallTau` which calculates
+the Kendall tau correlation function between two matrices stored in `csv` files.
+Use the argument `--help` to get all program arguments.
 
 We use the following command to run the application.
+
 ```
 ./test_reduce --mapping_under_load --mapping --number_of_samples 1000 --max_reduction_size 1000000 --matrix_size 4096
 ```
-The program first calculates the instruction ordering in absence of parallel workload then repeats the same measurements while running a matrix-matrix product in parallel on the GPU. 
-The GPU can be selected with the environment variable `CUDA_VISIBLE_DEVICES` or `HIP_VISIBLE_DEVICES` on a multi-gpu machine followed by either an integer or id string `MIG-8ffb15ae-81b3-5204-a73d-1668580a36b6` (for GH200 MiG configurations). 
 
-The results are stored in several `csv` files whose name encode the GPU architecture and the workload type. File with name `mapping_atomicInc_block_index_GH200.csv` (`atomic_ops_ordering_under_load_GH200.csv`)) for instance states that we measure the instruction order in absence (presence) of external workload on a GH200 GPU. This file contains a list of already sorted block index versus execution order. All these numbers are integer.
+The program first calculates the instruction ordering in absence of parallel
+workload then repeats the same measurements while running a matrix-matrix
+product in parallel on the GPU. The GPU can be selected with the environment
+variable `CUDA_VISIBLE_DEVICES` or `HIP_VISIBLE_DEVICES` on a multi-gpu machine
+followed by either an integer or id string
+`MIG-8ffb15ae-81b3-5204-a73d-1668580a36b6` (for GH200 MiG configurations).
 
-The second application calculates the Kendall Tau correlation function on GPU. Please refers to the [wikipedia](https://en.wikipedia.org/wiki/Kendall_rank_correlation_coefficient) page and references therein for a full description of its properties. Its implementation uses atomic instructions on integers which are not sensitive to instruction order, making the result platform independent. The application compares two csv file generated by the `test_reduce` application and returns the lower triangular part of the correlation matrix. To get the correlation matrix, simply enter
+The results are stored in several `csv` files whose name encode the `GPU`
+architecture and the workload type. File with name
+`mapping_atomicInc_block_index_GH200.csv`
+(`atomic_ops_ordering_under_load_GH200.csv`)) for instance states that we
+measure the instruction order in absence (presence) of external workload on a
+GH200 GPU. This file contains a list of already sorted block index versus
+execution order. All these numbers are integer.
+
+The second application calculates the Kendall Tau correlation function on GPU.
+Please refers to the
+[wikipedia](https://en.wikipedia.org/wiki/Kendall_rank_correlation_coefficient)
+page and references therein for a full description of its properties. Its
+implementation uses atomic instructions on integers which are not sensitive to
+instruction order, making the result platform independent. The application
+compares two csv files generated by the `test_reduce` application and returns
+the lower triangular part of the correlation matrix. To get the correlation
+matrix, simply enter
+
 ```
 ./KendallTau -N 1000 -n 7913 mapping_atomicInc_block_index_GH200.csv atomic_ops_ordering_under_load_GH200.csv -o my_file.csv
 ```
+
 to compare two different files or
+
 ```
 ./KendallTau -N 1000 -n 7913 mapping_atomicInc_block_index_GH200.csv -o my_file.csv
 ```
-to calculate the correlation within the same file. The syntax 
+
+to calculate the correlation within the same file. The following syntax is also
+allowed.
+
+
 ```
 ./KendallTau -N 1000 -n 7913 mapping_atomicInc_block_index_GH200.csv mapping_atomicInc_block_index_GH200.csv -o my_file.csv
 ```
-will also work. 
 
-The second application returns a csv files full of floating point numbers representing the distribution of the kendall tau correlation. Plotting the historgrams of this distribution is done externally. A mathematica script is provided for convenience. 
+The second application returns a `csv` file full of floating point numbers
+representing the distribution of the kendall tau correlation. Plotting the
+histograms of this distribution is done externally. A mathematica script is
+provided for convenience.
 
 ### Results
 
